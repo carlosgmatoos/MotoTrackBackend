@@ -1,0 +1,2412 @@
+openapi: 3.0.0
+info:
+  title: MotoTrack API
+  description: API para el Sistema de Registro y Control de Motocicletas en Santo Domingo
+  version: 1.0.0
+  contact:
+    email: info@mototrack.com
+
+servers:
+  - url: /api
+    description: API base URL
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Error del servidor"
+        message:
+          type: string
+          example: "Ocurrió un error interno en el servidor"
+
+    LoginRequest:
+      type: object
+      required:
+        - correo
+        - contrasena
+      properties:
+        correo:
+          type: string
+          format: email
+          example: "usuario@ejemplo.com"
+        contrasena:
+          type: string
+          format: password
+          example: "Contraseña123"
+
+    RegisterRequest:
+      type: object
+      required:
+        - nombres
+        - apellidos
+        - correo
+        - contrasena
+      properties:
+        nombres:
+          type: string
+          example: "Juan Carlos"
+        apellidos:
+          type: string
+          example: "Pérez Rodríguez"
+        correo:
+          type: string
+          format: email
+          example: "juancarlos@ejemplo.com"
+        contrasena:
+          type: string
+          format: password
+          example: "Contraseña123"
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Inicio de sesión exitoso"
+        data:
+          type: object
+          properties:
+            user:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                nombres:
+                  type: string
+                  example: "Juan Carlos"
+                apellidos:
+                  type: string
+                  example: "Pérez Rodríguez"
+                correo:
+                  type: string
+                  example: "juancarlos@ejemplo.com"
+                role:
+                  type: string
+                  example: "cliente"
+            accessToken:
+              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            refreshToken:
+              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    TokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Token actualizado exitosamente"
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            refreshToken:
+              type: string
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    UserCreateRequest:
+      type: object
+      required:
+        - nombres
+        - apellidos
+        - correo
+        - contrasena
+        - idTipoUsuario
+      properties:
+        nombres:
+          type: string
+          example: "Juan Carlos"
+        apellidos:
+          type: string
+          example: "Pérez Rodríguez"
+        correo:
+          type: string
+          format: email
+          example: "juancarlos@ejemplo.com"
+        contrasena:
+          type: string
+          format: password
+          example: "Contraseña123"
+        idTipoUsuario:
+          type: integer
+          example: 2
+
+    UserUpdateRequest:
+      type: object
+      required:
+        - idUsuario
+      properties:
+        idUsuario:
+          type: integer
+          example: 1
+        nombres:
+          type: string
+          example: "Juan Carlos"
+        apellidos:
+          type: string
+          example: "Pérez Rodríguez"
+        correo:
+          type: string
+          format: email
+          example: "juancarlos@ejemplo.com"
+        contrasena:
+          type: string
+          format: password
+          example: "NuevaContraseña123"
+        estado:
+          type: string
+          enum: [activo, inactivo,deshabilitado]
+          example: "activo"
+        idTipoUsuario:
+          type: integer
+          example: 2
+
+    UserDeleteRequest:
+      type: object
+      required:
+        - idUsuario
+      properties:
+        idUsuario:
+          type: integer
+          example: 1
+
+    UsersListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          example: 2
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserProfile'
+
+    TipoUsuario:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nombre:
+          type: string
+          example: "Administrador"
+        descripcion:
+          type: string
+          example: "Usuario con todos los permisos del sistema"
+        permisos:
+          type: object
+          properties:
+            crear:
+              type: boolean
+              example: true
+            editar:
+              type: boolean
+              example: true
+            eliminar:
+              type: boolean
+              example: true
+
+    TipoUsuarioCreateRequest:
+      type: object
+      required:
+        - nombre
+      properties:
+        nombre:
+          type: string
+          example: "Supervisor"
+        descripcion:
+          type: string
+          example: "Usuario con permisos de supervisión"
+        poderCrear:
+          type: boolean
+          example: true
+        poderEditar:
+          type: boolean
+          example: true
+        poderEliminar:
+          type: boolean
+          example: false
+
+    TipoUsuarioUpdateRequest:
+      type: object
+      required:
+        - idTipoUsuario
+      properties:
+        idTipoUsuario:
+          type: integer
+          example: 4
+        nombre:
+          type: string
+          example: "Supervisor"
+        descripcion:
+          type: string
+          example: "Usuario con permisos de supervisión"
+        poderCrear:
+          type: boolean
+          example: true
+        poderEditar:
+          type: boolean
+          example: true
+        poderEliminar:
+          type: boolean
+          example: false
+
+    TipoUsuarioDeleteRequest:
+      type: object
+      required:
+        - idTipoUsuario
+      properties:
+        idTipoUsuario:
+          type: integer
+          example: 4
+
+    TipoUsuarioResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Tipo de usuario creado exitosamente"
+        data:
+          $ref: '#/components/schemas/TipoUsuario'
+
+    TiposUsuarioListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          example: 3
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TipoUsuario'
+
+    Provincia:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nombreProvincia:
+          type: string
+          example: "Santo Domingo"
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+        fechaCreacion:
+          type: string
+          format: date-time
+          example: "2023-05-15T14:30:00Z"
+
+    ProvinciaCreateRequest:
+      type: object
+      required:
+        - nombreProvincia
+      properties:
+        nombreProvincia:
+          type: string
+          example: "Santiago"
+
+    ProvinciaUpdateRequest:
+      type: object
+      required:
+        - idProvincia
+      properties:
+        idProvincia:
+          type: integer
+          example: 2
+        nombreProvincia:
+          type: string
+          example: "Santiago de los Caballeros"
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+
+    ProvinciaDeleteRequest:
+      type: object
+      required:
+        - idProvincia
+      properties:
+        idProvincia:
+          type: integer
+          example: 2
+
+    ProvinciaResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Provincia creada exitosamente"
+        data:
+          $ref: '#/components/schemas/Provincia'
+
+    ProvinciasListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          example: 2
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Provincia'
+
+    Municipio:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nombreMunicipio:
+          type: string
+          example: "Santo Domingo Este"
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+        fechaCreacion:
+          type: string
+          format: date-time
+          example: "2023-05-15T14:30:00Z"
+        provincia:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            nombreProvincia:
+              type: string
+              example: "Santo Domingo"
+
+    MunicipioCreateRequest:
+      type: object
+      required:
+        - nombreMunicipio
+        - idProvincia
+      properties:
+        nombreMunicipio:
+          type: string
+          example: "Villa Mella"
+        idProvincia:
+          type: integer
+          example: 1
+
+    MunicipioUpdateRequest:
+      type: object
+      required:
+        - idMunicipio
+      properties:
+        idMunicipio:
+          type: integer
+          example: 3
+        nombreMunicipio:
+          type: string
+          example: "Villa Mella"
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+        idProvincia:
+          type: integer
+          example: 1
+
+    MunicipioDeleteRequest:
+      type: object
+      required:
+        - idMunicipio
+      properties:
+        idMunicipio:
+          type: integer
+          example: 3
+
+    MunicipioResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Municipio creado exitosamente"
+        data:
+          $ref: '#/components/schemas/Municipio'
+
+    MunicipiosListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          example: 3
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Municipio'
+
+    Ubicacion:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        direccion:
+          type: string
+          example: "Calle Principal #123"
+        sector:
+          type: string
+          example: "Los Mina"
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+        fechaCreacion:
+          type: string
+          format: date-time
+          example: "2023-05-15T14:30:00Z"
+        municipio:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            nombreMunicipio:
+              type: string
+              example: "Santo Domingo Este"
+            provincia:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                nombreProvincia:
+                  type: string
+                  example: "Santo Domingo"
+
+    UbicacionCreateRequest:
+      type: object
+      required:
+        - direccion
+        - idMunicipio
+      properties:
+        direccion:
+          type: string
+          example: "Avenida Principal #456"
+        sector:
+          type: string
+          example: "Ensanche Ozama"
+        idMunicipio:
+          type: integer
+          example: 1
+
+    UbicacionUpdateRequest:
+      type: object
+      required:
+        - idUbicacion
+      properties:
+        idUbicacion:
+          type: integer
+          example: 2
+        direccion:
+          type: string
+          example: "Avenida Principal #456"
+        sector:
+          type: string
+          example: "Ensanche Ozama"
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+        idMunicipio:
+          type: integer
+          example: 1
+
+    UbicacionDeleteRequest:
+      type: object
+      required:
+        - idUbicacion
+      properties:
+        idUbicacion:
+          type: integer
+          example: 2
+
+    UbicacionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Ubicación creada exitosamente"
+        data:
+          $ref: '#/components/schemas/Ubicacion'
+
+    UbicacionesListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          example: 2
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ubicacion'
+
+    Persona:
+      type: object
+      properties:
+        idPersona:
+          type: integer
+          example: 1
+        nombres:
+          type: string
+          example: "Juan Carlos"
+        apellidos:
+          type: string
+          example: "Pérez Rodríguez"
+        cedula:
+          type: string
+          example: "40212345678"
+        fechaNacimiento:
+          type: string
+          format: date
+          example: "1990-01-15"
+        estadoCivil:
+          type: string
+          example: "soltero"
+        sexo:
+          type: string
+          example: "M"
+        telefono:
+          type: string
+          example: "8091234567"
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+        idUbicacion:
+          type: integer
+          example: 1
+        idTipoPersona:
+          type: integer
+          example: 1
+        tipoPersonaNombre:
+          type: string
+          example: "Ciudadano"
+
+    PersonaInput:
+      type: object
+      properties:
+        nombre:
+          type: string
+        apellido:
+          type: string
+        documento:
+          type: string
+        telefono:
+          type: string
+        correo:
+          type: string
+        direccion:
+          type: string
+        tipoPersonaId:
+          type: integer
+          format: int64
+      required:
+        - nombre
+        - apellido
+        - documento
+        - tipoPersonaId
+    
+    TipoPersona:
+      type: object
+      properties:
+        idTipoPersona:
+          type: integer
+          example: 1
+        nombre:
+          type: string
+          example: "Ciudadano"
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+
+    TipoPersonaInput:
+      type: object
+      properties:
+        nombre:
+          type: string
+        descripcion:
+          type: string
+      required:
+        - nombre
+
+    PersonaResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Persona creada exitosamente"
+        data:
+          $ref: '#/components/schemas/Persona'
+
+    PersonasListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Persona'
+
+    PersonaCreateRequest:
+      type: object
+      required:
+        - nombres
+        - apellidos
+        - cedula
+        - idTipoPersona
+      properties:
+        nombres:
+          type: string
+          example: "Juan Carlos"
+        apellidos:
+          type: string
+          example: "Pérez Rodríguez"
+        cedula:
+          type: string
+          example: "40212345678"
+        fechaNacimiento:
+          type: string
+          format: date
+          example: "1990-01-15"
+        estadoCivil:
+          type: string
+          example: "soltero"
+        sexo:
+          type: string
+          example: "M"
+        telefono:
+          type: string
+          example: "8091234567"
+        idUbicacion:
+          type: integer
+          example: 1
+        idTipoPersona:
+          type: integer
+          example: 1
+
+    PersonaUpdateRequest:
+      type: object
+      properties:
+        nombres:
+          type: string
+          example: "Juan Carlos"
+        apellidos:
+          type: string
+          example: "Pérez Rodríguez"
+        cedula:
+          type: string
+          example: "40212345678"
+        fechaNacimiento:
+          type: string
+          format: date
+          example: "1990-01-15"
+        estadoCivil:
+          type: string
+          example: "soltero"
+        sexo:
+          type: string
+          example: "M"
+        telefono:
+          type: string
+          example: "8091234567"
+        idUbicacion:
+          type: integer
+          example: 1
+        idTipoPersona:
+          type: integer
+          example: 1
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+
+    TipoPersonaResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Tipo de persona creado exitosamente"
+        data:
+          $ref: '#/components/schemas/TipoPersona'
+          
+    TiposPersonaListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TipoPersona'
+
+    TipoPersonaCreateRequest:
+      type: object
+      required:
+        - nombre
+      properties:
+        nombre:
+          type: string
+          example: "Ciudadano"
+          enum: [ciudadano, empleado, administrador]
+
+    TipoPersonaUpdateRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+          example: "Ciudadano"
+          enum: [ciudadano, empleado, administrador]
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+
+paths:
+  # ===== RUTAS DE AUTENTICACIÓN =====
+  /register:
+    post:
+      tags:
+        - Autenticación
+      summary: Registrar un nuevo usuario
+      description: Crea una nueva cuenta de usuario cliente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Usuario registrado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Datos inválidos o correo ya registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /login:
+    post:
+      tags:
+        - Autenticación
+      summary: Iniciar sesión
+      description: Autentica un usuario y devuelve tokens de acceso
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Inicio de sesión exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Credenciales inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /refresh-token:
+    post:
+      tags:
+        - Autenticación
+      summary: Refrescar token de acceso
+      description: Genera un nuevo token de acceso usando un refresh token válido
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Token inválido o expirado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== RUTAS DE USUARIOS =====
+  /user:
+    get:
+      tags:
+        - Usuarios
+      summary: Obtener listado de usuarios
+      description: Obtiene un listado de usuarios con filtros opcionales (solo para empleados y administradores)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: nombres
+          in: query
+          description: Filtrar por nombres
+          schema:
+            type: string
+        - name: apellidos
+          in: query
+          description: Filtrar por apellidos
+          schema:
+            type: string
+        - name: correo
+          in: query
+          description: Filtrar por correo electrónico
+          schema:
+            type: string
+        - name: estado
+          in: query
+          description: Filtrar por estado
+          schema:
+            type: string
+            enum: [activo, inactivo, deshabilitado]
+        - name: idTipoUsuario
+          in: query
+          description: Filtrar por tipo de usuario
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Listado de usuarios obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsersListResponse'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Usuarios
+      summary: Crear usuario
+      description: Crea un nuevo usuario (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+      responses:
+        '201':
+          description: Usuario creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Usuarios
+      summary: Actualizar usuario
+      description: Actualiza un usuario existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: Usuario actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Usuarios
+      summary: Eliminar usuario
+      description: Elimina un usuario existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserDeleteRequest'
+      responses:
+        '200':
+          description: Usuario eliminado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Usuario eliminado exitosamente"
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== RUTAS DE TIPOS DE USUARIO =====
+  /tipoUsuario:
+    get:
+      tags:
+        - Tipos de Usuario
+      summary: Obtener todos los tipos de usuario
+      description: Obtiene un listado de todos los tipos de usuario (solo para empleados y administradores)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tipos de usuario obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TiposUsuarioListResponse'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Tipos de Usuario
+      summary: Crear tipo de usuario
+      description: Crea un nuevo tipo de usuario (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TipoUsuarioCreateRequest'
+      responses:
+        '201':
+          description: Tipo de usuario creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TipoUsuarioResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Tipos de Usuario
+      summary: Actualizar tipo de usuario
+      description: Actualiza un tipo de usuario existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TipoUsuarioUpdateRequest'
+      responses:
+        '200':
+          description: Tipo de usuario actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TipoUsuarioResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Tipo de usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Tipos de Usuario
+      summary: Eliminar tipo de usuario
+      description: Elimina un tipo de usuario existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TipoUsuarioDeleteRequest'
+      responses:
+        '200':
+          description: Tipo de usuario eliminado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Tipo de usuario eliminado exitosamente"
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Tipo de usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== RUTAS DE PROVINCIAS =====
+  /provincia:
+    get:
+      tags:
+        - Provincias
+      summary: Obtener todas las provincias
+      description: Obtiene un listado de todas las provincias
+      parameters:
+        - name: id
+          in: query
+          description: Filtrar por ID
+          schema:
+            type: integer
+        - name: nombre
+          in: query
+          description: Filtrar por nombre
+          schema:
+            type: string
+        - name: estado
+          in: query
+          description: Filtrar por estado
+          schema:
+            type: string
+            enum: [activo, inactivo, deshabilitado]
+      responses:
+        '200':
+          description: Provincias obtenidas exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvinciasListResponse'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Provincias
+      summary: Crear provincia
+      description: Crea una nueva provincia (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProvinciaCreateRequest'
+      responses:
+        '201':
+          description: Provincia creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvinciaResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Provincias
+      summary: Actualizar provincia
+      description: Actualiza una provincia existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProvinciaUpdateRequest'
+      responses:
+        '200':
+          description: Provincia actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProvinciaResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Provincia no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Provincias
+      summary: Eliminar provincia
+      description: Elimina una provincia existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProvinciaDeleteRequest'
+      responses:
+        '200':
+          description: Provincia eliminada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Provincia eliminada exitosamente"
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Provincia no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== RUTAS DE MUNICIPIOS =====
+  /municipio:
+    get:
+      tags:
+        - Municipios
+      summary: Obtener todos los municipios
+      description: Obtiene un listado de todos los municipios
+      parameters:
+        - name: id
+          in: query
+          description: Filtrar por ID
+          schema:
+            type: integer
+        - name: nombre
+          in: query
+          description: Filtrar por nombre
+          schema:
+            type: string
+        - name: estado
+          in: query
+          description: Filtrar por estado
+          schema:
+            type: string
+            enum: [activo, inactivo, deshabilitado]
+        - name: idProvincia
+          in: query
+          description: Filtrar por provincia
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Municipios obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MunicipiosListResponse'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Municipios
+      summary: Crear municipio
+      description: Crea un nuevo municipio (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MunicipioCreateRequest'
+      responses:
+        '201':
+          description: Municipio creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MunicipioResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Municipios
+      summary: Actualizar municipio
+      description: Actualiza un municipio existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MunicipioUpdateRequest'
+      responses:
+        '200':
+          description: Municipio actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MunicipioResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Municipio no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Municipios
+      summary: Eliminar municipio
+      description: Elimina un municipio existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MunicipioDeleteRequest'
+      responses:
+        '200':
+          description: Municipio eliminado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Municipio eliminado exitosamente"
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Municipio no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== RUTAS DE UBICACIONES =====
+  /ubicacion:
+    get:
+      tags:
+        - Ubicaciones
+      summary: Obtener todas las ubicaciones
+      description: Obtiene un listado de todas las ubicaciones
+      parameters:
+        - name: id
+          in: query
+          description: Filtrar por ID
+          schema:
+            type: integer
+        - name: direccion
+          in: query
+          description: Filtrar por dirección
+          schema:
+            type: string
+        - name: sector
+          in: query
+          description: Filtrar por sector
+          schema:
+            type: string
+        - name: estado
+          in: query
+          description: Filtrar por estado
+          schema:
+            type: string
+            enum: [activo, inactivo, deshabilitado]
+        - name: idMunicipio
+          in: query
+          description: Filtrar por municipio
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Ubicaciones obtenidas exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UbicacionesListResponse'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Ubicaciones
+      summary: Crear ubicación
+      description: Crea una nueva ubicación (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UbicacionCreateRequest'
+      responses:
+        '201':
+          description: Ubicación creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UbicacionResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Ubicaciones
+      summary: Actualizar ubicación
+      description: Actualiza una ubicación existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UbicacionUpdateRequest'
+      responses:
+        '200':
+          description: Ubicación actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UbicacionResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ubicación no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Ubicaciones
+      summary: Eliminar ubicación
+      description: Elimina una ubicación existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UbicacionDeleteRequest'
+      responses:
+        '200':
+          description: Ubicación eliminada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Ubicación eliminada exitosamente"
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Ubicación no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /persona:
+    get:
+      tags:
+        - Personas
+      summary: Obtener listado de personas
+      description: Obtiene un listado de personas con filtros opcionales (solo para empleados y administradores)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: nombres
+          in: query
+          description: Filtrar por nombres
+          schema:
+            type: string
+        - name: apellidos
+          in: query
+          description: Filtrar por apellidos
+          schema:
+            type: string
+        - name: cedula
+          in: query
+          description: Filtrar por cédula
+          schema:
+            type: string
+        - name: tipoPersona
+          in: query
+          description: Filtrar por tipo de persona
+          schema:
+            type: string
+        - name: estado
+          in: query
+          description: Filtrar por estado
+          schema:
+            type: string
+            enum: [activo, inactivo, deshabilitado]
+        - name: limit
+          in: query
+          description: Limitar cantidad de resultados
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          description: Desplazamiento de resultados
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Listado de personas obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonasListResponse'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Personas
+      summary: Crear persona
+      description: Crea una nueva persona (requiere autenticación)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PersonaCreateRequest'
+      responses:
+        '201':
+          description: Persona creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonaResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Personas
+      summary: Actualizar persona
+      description: Actualiza una persona existente (requiere autenticación)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required:
+                    - idPersona
+                  properties:
+                    idPersona:
+                      type: integer
+                      description: ID de la persona a actualizar
+                      example: 1
+                - $ref: '#/components/schemas/PersonaUpdateRequest'
+      responses:
+        '200':
+          description: Persona actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonaResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Persona no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Personas
+      summary: Eliminar persona
+      description: Elimina una persona existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - idPersona
+              properties:
+                idPersona:
+                  type: integer
+                  description: ID de la persona a eliminar
+                  example: 1
+      responses:
+        '200':
+          description: Persona eliminada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Persona eliminada exitosamente"
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Persona no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /persona/empleados:
+    get:
+      tags:
+        - Personas
+      summary: Obtener listado de empleados
+      description: Obtiene un listado de personas con tipo 'Empleado' (solo para administradores)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: nombres
+          in: query
+          description: Filtrar por nombres
+          schema:
+            type: string
+        - name: apellidos
+          in: query
+          description: Filtrar por apellidos
+          schema:
+            type: string
+        - name: cedula
+          in: query
+          description: Filtrar por cédula
+          schema:
+            type: string
+        - name: estado
+          in: query
+          description: Filtrar por estado
+          schema:
+            type: string
+            enum: [activo, inactivo, deshabilitado]
+      responses:
+        '200':
+          description: Listado de empleados obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Persona'
+                  count:
+                    type: integer
+                    example: 5
+                  message:
+                    type: string
+                    example: "Lista de empleados obtenida con éxito"
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  # ===== RUTAS DE TIPO PERSONA =====
+  /tipoPersona:
+    get:
+      tags:
+        - Tipos de Persona
+      summary: Obtener todos los tipos de persona
+      description: Obtiene un listado de todos los tipos de persona (solo para empleados y administradores)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tipos de persona obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TiposPersonaListResponse'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Tipos de Persona
+      summary: Crear tipo de persona
+      description: Crea un nuevo tipo de persona (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TipoPersonaCreateRequest'
+      responses:
+        '201':
+          description: Tipo de persona creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TipoPersonaResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Tipos de Persona
+      summary: Actualizar tipo de persona
+      description: Actualiza un tipo de persona existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required:
+                    - idTipoPersona
+                  properties:
+                    idTipoPersona:
+                      type: integer
+                      description: ID del tipo de persona a actualizar
+                      example: 1
+                - $ref: '#/components/schemas/TipoPersonaUpdateRequest'
+      responses:
+        '200':
+          description: Tipo de persona actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TipoPersonaResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Tipo de persona no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Tipos de Persona
+      summary: Eliminar tipo de persona
+      description: Elimina un tipo de persona existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - idTipoPersona
+              properties:
+                idTipoPersona:
+                  type: integer
+                  description: ID del tipo de persona a eliminar
+                  example: 1
+      responses:
+        '200':
+          description: Tipo de persona eliminado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Tipo de persona eliminado exitosamente"
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Tipo de persona no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
