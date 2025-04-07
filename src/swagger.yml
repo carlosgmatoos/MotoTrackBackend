@@ -834,6 +834,544 @@ components:
           enum: [activo, inactivo, deshabilitado]
           example: "activo"
 
+    # Esquemas para Marca
+    Marca:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nombre:
+          type: string
+          example: "Honda"
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+        fechaCreacion:
+          type: string
+          format: date-time
+          example: "2023-05-15T14:30:00Z"
+
+    MarcaCreateRequest:
+      type: object
+      required:
+        - nombre
+      properties:
+        nombre:
+          type: string
+          example: "Yamaha"
+
+    MarcaUpdateRequest:
+      type: object
+      required:
+        - idMarca
+      properties:
+        idMarca:
+          type: integer
+          example: 2
+        nombre:
+          type: string
+          example: "Yamaha"
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+
+    MarcaDeleteRequest:
+      type: object
+      required:
+        - idMarca
+      properties:
+        idMarca:
+          type: integer
+          example: 2
+
+    MarcaResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Marca creada exitosamente"
+        data:
+          $ref: '#/components/schemas/Marca'
+
+    MarcasListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          example: 3
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Marca'
+
+    # Esquemas para Modelo
+    Modelo:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nombre:
+          type: string
+          example: "CBR 600"
+        año:
+          type: integer
+          example: 2023
+        color:
+          type: string
+          example: "Rojo"
+        cilindraje:
+          type: string
+          example: "600cc"
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+        fechaCreacion:
+          type: string
+          format: date-time
+          example: "2023-05-15T14:30:00Z"
+        idMarca:
+          type: integer
+          example: 1
+        nombreMarca:
+          type: string
+          example: "Honda"
+
+    ModeloCreateRequest:
+      type: object
+      required:
+        - nombre
+        - año
+        - idMarca
+      properties:
+        nombre:
+          type: string
+          example: "CBR 600"
+        año:
+          type: integer
+          example: 2023
+        color:
+          type: string
+          example: "Rojo"
+        cilindraje:
+          type: string
+          example: "600cc"
+        idMarca:
+          type: integer
+          example: 1
+
+    ModeloUpdateRequest:
+      type: object
+      required:
+        - idModelo
+      properties:
+        idModelo:
+          type: integer
+          example: 2
+        nombre:
+          type: string
+          example: "CBR 600"
+        año:
+          type: integer
+          example: 2023
+        color:
+          type: string
+          example: "Negro"
+        cilindraje:
+          type: string
+          example: "600cc"
+        idMarca:
+          type: integer
+          example: 1
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+
+    ModeloDeleteRequest:
+      type: object
+      required:
+        - idModelo
+      properties:
+        idModelo:
+          type: integer
+          example: 2
+
+    ModeloResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Modelo creado exitosamente"
+        data:
+          $ref: '#/components/schemas/Modelo'
+
+    ModelosListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          example: 3
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Modelo'
+
+    # Esquemas para TipoVehiculo
+    TipoVehiculo:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nombre:
+          type: string
+          example: "Motocicleta"
+        capacidad:
+          type: integer
+          example: 2
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+        fechaCreacion:
+          type: string
+          format: date-time
+          example: "2023-05-15T14:30:00Z"
+
+    TipoVehiculoCreateRequest:
+      type: object
+      required:
+        - nombre
+      properties:
+        nombre:
+          type: string
+          example: "Motocicleta"
+        capacidad:
+          type: integer
+          example: 2
+
+    TipoVehiculoUpdateRequest:
+      type: object
+      required:
+        - idTipoVehiculo
+      properties:
+        idTipoVehiculo:
+          type: integer
+          example: 2
+        nombre:
+          type: string
+          example: "Motocicleta"
+        capacidad:
+          type: integer
+          example: 2
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+
+    TipoVehiculoDeleteRequest:
+      type: object
+      required:
+        - idTipoVehiculo
+      properties:
+        idTipoVehiculo:
+          type: integer
+          example: 2
+
+    TipoVehiculoResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Tipo de vehículo creado exitosamente"
+        data:
+          $ref: '#/components/schemas/TipoVehiculo'
+
+    TiposVehiculoListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          example: 3
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TipoVehiculo'
+
+    # Esquemas para Seguro
+    Seguro:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        proveedor:
+          type: string
+          example: "Seguros Patria"
+        numeroPoliza:
+          type: string
+          example: "POL-123456"
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+        fechaCreacion:
+          type: string
+          format: date-time
+          example: "2023-05-15T14:30:00Z"
+
+    SeguroCreateRequest:
+      type: object
+      required:
+        - proveedor
+        - numeroPoliza
+      properties:
+        proveedor:
+          type: string
+          example: "Seguros Patria"
+        numeroPoliza:
+          type: string
+          example: "POL-123456"
+
+    SeguroUpdateRequest:
+      type: object
+      required:
+        - idSeguro
+      properties:
+        idSeguro:
+          type: integer
+          example: 2
+        proveedor:
+          type: string
+          example: "Seguros Patria"
+        numeroPoliza:
+          type: string
+          example: "POL-789012"
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+
+    SeguroDeleteRequest:
+      type: object
+      required:
+        - idSeguro
+      properties:
+        idSeguro:
+          type: integer
+          example: 2
+
+    SeguroResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Seguro creado exitosamente"
+        data:
+          $ref: '#/components/schemas/Seguro'
+
+    SegurosListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          example: 3
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Seguro'
+
+    # Esquemas para Vehiculo
+    Vehiculo:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        chasis:
+          type: string
+          example: "1HGCM82633A123456"
+        tipoUso:
+          type: string
+          enum: [personal, recreativo, transporte, deportivo, empresarial]
+          example: "personal"
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+        fechaCreacion:
+          type: string
+          format: date-time
+          example: "2023-05-15T14:30:00Z"
+        idModelo:
+          type: integer
+          example: 1
+        nombreModelo:
+          type: string
+          example: "CBR 600"
+        añoModelo:
+          type: integer
+          example: 2023
+        nombreMarca:
+          type: string
+          example: "Honda"
+        idPropietario:
+          type: integer
+          example: 1
+        nombrePropietario:
+          type: string
+          example: "Juan Pérez"
+        idTipoVehiculo:
+          type: integer
+          example: 1
+        nombreTipoVehiculo:
+          type: string
+          example: "Motocicleta"
+        idSeguro:
+          type: integer
+          example: 1
+        proveedorSeguro:
+          type: string
+          example: "Seguros Patria"
+        numeroPoliza:
+          type: string
+          example: "POL-123456"
+        idMatricula:
+          type: integer
+          example: 1
+
+    VehiculoCreateRequest:
+      type: object
+      required:
+        - chasis
+        - tipoUso
+        - idModelo
+        - idPropietario
+        - idTipoVehiculo
+        - idSeguro
+      properties:
+        chasis:
+          type: string
+          example: "1HGCM82633A123456"
+        tipoUso:
+          type: string
+          enum: [personal, recreativo, transporte, deportivo, empresarial]
+          example: "personal"
+        idModelo:
+          type: integer
+          example: 1
+        idPropietario:
+          type: integer
+          example: 1
+        idTipoVehiculo:
+          type: integer
+          example: 1
+        idSeguro:
+          type: integer
+          example: 1
+        idMatricula:
+          type: integer
+          example: 1
+
+    VehiculoUpdateRequest:
+      type: object
+      required:
+        - idVehiculo
+      properties:
+        idVehiculo:
+          type: integer
+          example: 2
+        chasis:
+          type: string
+          example: "1HGCM82633A789012"
+        tipoUso:
+          type: string
+          enum: [personal, recreativo, transporte, deportivo, empresarial]
+          example: "recreativo"
+        idModelo:
+          type: integer
+          example: 2
+        idPropietario:
+          type: integer
+          example: 3
+        idTipoVehiculo:
+          type: integer
+          example: 1
+        idSeguro:
+          type: integer
+          example: 2
+        idMatricula:
+          type: integer
+          example: 2
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+
+    VehiculoDeleteRequest:
+      type: object
+      required:
+        - idVehiculo
+      properties:
+        idVehiculo:
+          type: integer
+          example: 2
+
+    VehiculoResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Vehículo creado exitosamente"
+        data:
+          $ref: '#/components/schemas/Vehiculo'
+
+    VehiculosListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          example: 3
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Vehiculo'
+
 paths:
   # ===== RUTAS DE AUTENTICACIÓN =====
   /register:
@@ -2400,6 +2938,1012 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Tipo de persona no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== RUTAS DE MARCAS =====
+  /marca:
+    get:
+      tags:
+        - Marcas
+      summary: Obtener todas las marcas
+      description: Obtiene un listado de todas las marcas de vehículos
+      parameters:
+        - name: id
+          in: query
+          description: Filtrar por ID
+          schema:
+            type: integer
+        - name: nombre
+          in: query
+          description: Filtrar por nombre
+          schema:
+            type: string
+        - name: estado
+          in: query
+          description: Filtrar por estado
+          schema:
+            type: string
+            enum: [activo, inactivo, deshabilitado]
+      responses:
+        '200':
+          description: Marcas obtenidas exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarcasListResponse'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Marcas
+      summary: Crear marca
+      description: Crea una nueva marca de vehículo (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarcaCreateRequest'
+      responses:
+        '201':
+          description: Marca creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarcaResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Marcas
+      summary: Actualizar marca
+      description: Actualiza una marca de vehículo existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarcaUpdateRequest'
+      responses:
+        '200':
+          description: Marca actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarcaResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Marca no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Marcas
+      summary: Eliminar marca
+      description: Elimina una marca de vehículo existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarcaDeleteRequest'
+      responses:
+        '200':
+          description: Marca eliminada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Marca eliminada exitosamente"
+        '400':
+          description: Datos inválidos o marca en uso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Marca no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== RUTAS DE MODELOS =====
+  /modelo:
+    get:
+      tags:
+        - Modelos
+      summary: Obtener todos los modelos
+      description: Obtiene un listado de todos los modelos de vehículos
+      parameters:
+        - name: id
+          in: query
+          description: Filtrar por ID
+          schema:
+            type: integer
+        - name: nombre
+          in: query
+          description: Filtrar por nombre
+          schema:
+            type: string
+        - name: año
+          in: query
+          description: Filtrar por año
+          schema:
+            type: integer
+        - name: color
+          in: query
+          description: Filtrar por color
+          schema:
+            type: string
+        - name: cilindraje
+          in: query
+          description: Filtrar por cilindraje
+          schema:
+            type: string
+        - name: idMarca
+          in: query
+          description: Filtrar por marca
+          schema:
+            type: integer
+        - name: estado
+          in: query
+          description: Filtrar por estado
+          schema:
+            type: string
+            enum: [activo, inactivo, deshabilitado]
+      responses:
+        '200':
+          description: Modelos obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelosListResponse'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Modelos
+      summary: Crear modelo
+      description: Crea un nuevo modelo de vehículo (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModeloCreateRequest'
+      responses:
+        '201':
+          description: Modelo creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModeloResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Modelos
+      summary: Actualizar modelo
+      description: Actualiza un modelo de vehículo existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModeloUpdateRequest'
+      responses:
+        '200':
+          description: Modelo actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModeloResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Modelo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Modelos
+      summary: Eliminar modelo
+      description: Elimina un modelo de vehículo existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModeloDeleteRequest'
+      responses:
+        '200':
+          description: Modelo eliminado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Modelo eliminado exitosamente"
+        '400':
+          description: Datos inválidos o modelo en uso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Modelo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== RUTAS DE TIPOS DE VEHÍCULO =====
+  /tipovehiculo:
+    get:
+      tags:
+        - Tipos de Vehículo
+      summary: Obtener todos los tipos de vehículo
+      description: Obtiene un listado de todos los tipos de vehículo
+      parameters:
+        - name: id
+          in: query
+          description: Filtrar por ID
+          schema:
+            type: integer
+        - name: nombre
+          in: query
+          description: Filtrar por nombre
+          schema:
+            type: string
+        - name: capacidad
+          in: query
+          description: Filtrar por capacidad
+          schema:
+            type: integer
+        - name: estado
+          in: query
+          description: Filtrar por estado
+          schema:
+            type: string
+            enum: [activo, inactivo, deshabilitado]
+      responses:
+        '200':
+          description: Tipos de vehículo obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TiposVehiculoListResponse'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Tipos de Vehículo
+      summary: Crear tipo de vehículo
+      description: Crea un nuevo tipo de vehículo (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TipoVehiculoCreateRequest'
+      responses:
+        '201':
+          description: Tipo de vehículo creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TipoVehiculoResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Tipos de Vehículo
+      summary: Actualizar tipo de vehículo
+      description: Actualiza un tipo de vehículo existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TipoVehiculoUpdateRequest'
+      responses:
+        '200':
+          description: Tipo de vehículo actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TipoVehiculoResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Tipo de vehículo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Tipos de Vehículo
+      summary: Eliminar tipo de vehículo
+      description: Elimina un tipo de vehículo existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TipoVehiculoDeleteRequest'
+      responses:
+        '200':
+          description: Tipo de vehículo eliminado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Tipo de vehículo eliminado exitosamente"
+        '400':
+          description: Datos inválidos o tipo de vehículo en uso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Tipo de vehículo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== RUTAS DE SEGUROS =====
+  /seguro:
+    get:
+      tags:
+        - Seguros
+      summary: Obtener todos los seguros
+      description: Obtiene un listado de todos los seguros
+      parameters:
+        - name: id
+          in: query
+          description: Filtrar por ID
+          schema:
+            type: integer
+        - name: proveedor
+          in: query
+          description: Filtrar por proveedor
+          schema:
+            type: string
+        - name: numeroPoliza
+          in: query
+          description: Filtrar por número de póliza
+          schema:
+            type: string
+        - name: estado
+          in: query
+          description: Filtrar por estado
+          schema:
+            type: string
+            enum: [activo, inactivo, deshabilitado]
+      responses:
+        '200':
+          description: Seguros obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SegurosListResponse'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Seguros
+      summary: Crear seguro
+      description: Crea un nuevo seguro (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeguroCreateRequest'
+      responses:
+        '201':
+          description: Seguro creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeguroResponse'
+        '400':
+          description: Datos inválidos o número de póliza duplicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Seguros
+      summary: Actualizar seguro
+      description: Actualiza un seguro existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeguroUpdateRequest'
+      responses:
+        '200':
+          description: Seguro actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SeguroResponse'
+        '400':
+          description: Datos inválidos o número de póliza duplicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Seguro no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Seguros
+      summary: Eliminar seguro
+      description: Elimina un seguro existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeguroDeleteRequest'
+      responses:
+        '200':
+          description: Seguro eliminado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Seguro eliminado exitosamente"
+        '400':
+          description: Datos inválidos o seguro en uso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Seguro no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ===== RUTAS DE VEHÍCULOS =====
+  /vehiculo:
+    get:
+      tags:
+        - Vehículos
+      summary: Obtener todos los vehículos
+      description: Obtiene un listado de todos los vehículos
+      parameters:
+        - name: id
+          in: query
+          description: Filtrar por ID
+          schema:
+            type: integer
+        - name: chasis
+          in: query
+          description: Filtrar por número de chasis
+          schema:
+            type: string
+        - name: tipoUso
+          in: query
+          description: Filtrar por tipo de uso
+          schema:
+            type: string
+            enum: [personal, recreativo, transporte, deportivo, empresarial]
+        - name: idModelo
+          in: query
+          description: Filtrar por modelo
+          schema:
+            type: integer
+        - name: idPropietario
+          in: query
+          description: Filtrar por propietario
+          schema:
+            type: integer
+        - name: idTipoVehiculo
+          in: query
+          description: Filtrar por tipo de vehículo
+          schema:
+            type: integer
+        - name: idSeguro
+          in: query
+          description: Filtrar por seguro
+          schema:
+            type: integer
+        - name: idMatricula
+          in: query
+          description: Filtrar por matrícula
+          schema:
+            type: integer
+        - name: estado
+          in: query
+          description: Filtrar por estado
+          schema:
+            type: string
+            enum: [activo, inactivo, deshabilitado]
+      responses:
+        '200':
+          description: Vehículos obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehiculosListResponse'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+        - Vehículos
+      summary: Crear vehículo
+      description: Crea un nuevo vehículo (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehiculoCreateRequest'
+      responses:
+        '201':
+          description: Vehículo creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehiculoResponse'
+        '400':
+          description: Datos inválidos o número de chasis duplicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Vehículos
+      summary: Actualizar vehículo
+      description: Actualiza un vehículo existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehiculoUpdateRequest'
+      responses:
+        '200':
+          description: Vehículo actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehiculoResponse'
+        '400':
+          description: Datos inválidos o número de chasis duplicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Vehículo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Vehículos
+      summary: Eliminar vehículo
+      description: Elimina un vehículo existente (solo para administradores)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehiculoDeleteRequest'
+      responses:
+        '200':
+          description: Vehículo eliminado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Vehículo eliminado exitosamente"
+        '400':
+          description: Datos inválidos o vehículo en uso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Vehículo no encontrado
           content:
             application/json:
               schema:

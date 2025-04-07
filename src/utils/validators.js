@@ -327,6 +327,249 @@ const validateTipoPersonaUpdate = (tipoPersonaData) => {
   };
 };
 
+/**
+ * Valida los datos de una marca
+ */
+const validateMarcaData = (data) => {
+  const errors = [];
+  
+  // Validar nombre de marca
+  if (!data.nombre) {
+    errors.push('El nombre de la marca es obligatorio');
+  } else if (typeof data.nombre !== 'string') {
+    errors.push('El nombre de la marca debe ser texto');
+  } else if (data.nombre.length < 2) {
+    errors.push('El nombre de la marca debe tener al menos 2 caracteres');
+  } else if (data.nombre.length > 75) {
+    errors.push('El nombre de la marca no puede exceder los 75 caracteres');
+  }
+  
+  // Validar estado si está presente
+  if (data.estado !== undefined && !['activo', 'inactivo', 'deshabilitado'].includes(data.estado)) {
+    errors.push('El estado debe ser "activo", "inactivo" o "deshabilitado"');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+/**
+ * Valida los datos de un modelo
+ */
+const validateModeloData = (data) => {
+  const errors = [];
+  
+  // Validar nombre de modelo
+  if (!data.nombre) {
+    errors.push('El nombre del modelo es obligatorio');
+  } else if (typeof data.nombre !== 'string') {
+    errors.push('El nombre del modelo debe ser texto');
+  } else if (data.nombre.length < 2) {
+    errors.push('El nombre del modelo debe tener al menos 2 caracteres');
+  } else if (data.nombre.length > 100) {
+    errors.push('El nombre del modelo no puede exceder los 100 caracteres');
+  }
+  
+  // Validar año
+  if (!data.año) {
+    errors.push('El año del modelo es obligatorio');
+  } else if (isNaN(parseInt(data.año))) {
+    errors.push('El año del modelo debe ser un número');
+  } else {
+    const año = parseInt(data.año);
+    const añoActual = new Date().getFullYear();
+    if (año < 1900 || año > añoActual + 1) {
+      errors.push(`El año debe estar entre 1900 y ${añoActual + 1}`);
+    }
+  }
+  
+  // Validar color (opcional)
+  if (data.color !== undefined && data.color !== null) {
+    if (typeof data.color !== 'string') {
+      errors.push('El color debe ser texto');
+    } else if (data.color.length > 30) {
+      errors.push('El color no puede exceder los 30 caracteres');
+    }
+  }
+  
+  // Validar cilindraje (opcional)
+  if (data.cilindraje !== undefined && data.cilindraje !== null) {
+    if (typeof data.cilindraje !== 'string') {
+      errors.push('El cilindraje debe ser texto');
+    } else if (data.cilindraje.length > 25) {
+      errors.push('El cilindraje no puede exceder los 25 caracteres');
+    }
+  }
+  
+  // Validar ID de marca
+  if (!data.idMarca) {
+    errors.push('El ID de la marca es obligatorio');
+  } else if (isNaN(parseInt(data.idMarca))) {
+    errors.push('El ID de la marca debe ser un número');
+  } else if (parseInt(data.idMarca) <= 0) {
+    errors.push('El ID de la marca debe ser un número positivo');
+  }
+  
+  // Validar estado si está presente
+  if (data.estado !== undefined && !['activo', 'inactivo', 'deshabilitado'].includes(data.estado)) {
+    errors.push('El estado debe ser "activo", "inactivo" o "deshabilitado"');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+/**
+ * Valida los datos de un tipo de vehículo
+ */
+const validateTipoVehiculoData = (data) => {
+  const errors = [];
+  
+  // Validar nombre
+  if (!data.nombre) {
+    errors.push('El nombre del tipo de vehículo es obligatorio');
+  } else if (typeof data.nombre !== 'string') {
+    errors.push('El nombre del tipo de vehículo debe ser texto');
+  } else if (data.nombre.length < 2) {
+    errors.push('El nombre del tipo de vehículo debe tener al menos 2 caracteres');
+  } else if (data.nombre.length > 75) {
+    errors.push('El nombre del tipo de vehículo no puede exceder los 75 caracteres');
+  }
+  
+  // Validar capacidad (opcional)
+  if (data.capacidad !== undefined && data.capacidad !== null) {
+    if (isNaN(parseInt(data.capacidad))) {
+      errors.push('La capacidad debe ser un número');
+    } else if (parseInt(data.capacidad) <= 0) {
+      errors.push('La capacidad debe ser un número positivo');
+    }
+  }
+  
+  // Validar estado si está presente
+  if (data.estado !== undefined && !['activo', 'inactivo', 'deshabilitado'].includes(data.estado)) {
+    errors.push('El estado debe ser "activo", "inactivo" o "deshabilitado"');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+/**
+ * Valida los datos de un seguro
+ */
+const validateSeguroData = (data) => {
+  const errors = [];
+  
+  // Validar proveedor
+  if (!data.proveedor) {
+    errors.push('El proveedor del seguro es obligatorio');
+  } else if (typeof data.proveedor !== 'string') {
+    errors.push('El proveedor del seguro debe ser texto');
+  } else if (data.proveedor.length < 2) {
+    errors.push('El proveedor del seguro debe tener al menos 2 caracteres');
+  } else if (data.proveedor.length > 100) {
+    errors.push('El proveedor del seguro no puede exceder los 100 caracteres');
+  }
+  
+  // Validar número de póliza
+  if (!data.numeroPoliza) {
+    errors.push('El número de póliza es obligatorio');
+  } else if (typeof data.numeroPoliza !== 'string') {
+    errors.push('El número de póliza debe ser texto');
+  } else if (data.numeroPoliza.length < 5) {
+    errors.push('El número de póliza debe tener al menos 5 caracteres');
+  } else if (data.numeroPoliza.length > 15) {
+    errors.push('El número de póliza no puede exceder los 15 caracteres');
+  }
+  
+  // Validar estado si está presente
+  if (data.estado !== undefined && !['activo', 'inactivo', 'deshabilitado'].includes(data.estado)) {
+    errors.push('El estado debe ser "activo", "inactivo" o "deshabilitado"');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+/**
+ * Valida los datos de un vehículo
+ */
+const validateVehiculoData = (data) => {
+  const errors = [];
+  
+  // Validar chasis
+  if (!data.chasis) {
+    errors.push('El número de chasis es obligatorio');
+  } else if (typeof data.chasis !== 'string') {
+    errors.push('El número de chasis debe ser texto');
+  } else if (data.chasis.length !== 17) {
+    errors.push('El número de chasis debe tener exactamente 17 caracteres');
+  }
+  
+  // Validar tipo de uso
+  if (!data.tipoUso) {
+    errors.push('El tipo de uso es obligatorio');
+  } else if (typeof data.tipoUso !== 'string') {
+    errors.push('El tipo de uso debe ser texto');
+  } else if (!['personal', 'recreativo', 'transporte', 'deportivo', 'empresarial'].includes(data.tipoUso)) {
+    errors.push('El tipo de uso debe ser "personal", "recreativo", "transporte", "deportivo" o "empresarial"');
+  }
+  
+  // Validar ID del modelo
+  if (!data.idModelo) {
+    errors.push('El ID del modelo es obligatorio');
+  } else if (isNaN(parseInt(data.idModelo))) {
+    errors.push('El ID del modelo debe ser un número');
+  } else if (parseInt(data.idModelo) <= 0) {
+    errors.push('El ID del modelo debe ser un número positivo');
+  }
+  
+  // Validar ID del propietario
+  if (!data.idPropietario) {
+    errors.push('El ID del propietario es obligatorio');
+  } else if (isNaN(parseInt(data.idPropietario))) {
+    errors.push('El ID del propietario debe ser un número');
+  } else if (parseInt(data.idPropietario) <= 0) {
+    errors.push('El ID del propietario debe ser un número positivo');
+  }
+  
+  // Validar ID del tipo de vehículo
+  if (!data.idTipoVehiculo) {
+    errors.push('El ID del tipo de vehículo es obligatorio');
+  } else if (isNaN(parseInt(data.idTipoVehiculo))) {
+    errors.push('El ID del tipo de vehículo debe ser un número');
+  } else if (parseInt(data.idTipoVehiculo) <= 0) {
+    errors.push('El ID del tipo de vehículo debe ser un número positivo');
+  }
+  
+  // Validar ID del seguro
+  if (!data.idSeguro) {
+    errors.push('El ID del seguro es obligatorio');
+  } else if (isNaN(parseInt(data.idSeguro))) {
+    errors.push('El ID del seguro debe ser un número');
+  } else if (parseInt(data.idSeguro) <= 0) {
+    errors.push('El ID del seguro debe ser un número positivo');
+  }
+  
+  // Validar estado si está presente
+  if (data.estado !== undefined && !['activo', 'inactivo', 'deshabilitado'].includes(data.estado)) {
+    errors.push('El estado debe ser "activo", "inactivo" o "deshabilitado"');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
 module.exports = {
   validateEmail,
   validatePassword,
@@ -339,5 +582,10 @@ module.exports = {
   validatePersona,
   validatePersonaUpdate,
   validateTipoPersona,
-  validateTipoPersonaUpdate
+  validateTipoPersonaUpdate,
+  validateMarcaData,
+  validateModeloData,
+  validateTipoVehiculoData,
+  validateSeguroData,
+  validateVehiculoData
 }; 

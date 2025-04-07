@@ -2,8 +2,20 @@ const jwt = require('jsonwebtoken');
 const config = require('../config');
 const userService = require('./userService');
 
-const generateToken = (user) => {
-  // Crear payload para el token JWT
+const createToken = (payload, expiresIn = config.JWT_EXPIRATION) => {
+  return jwt.sign(payload, config.JWT_SECRET, { expiresIn });
+};
+
+const verifyToken = (token) => {
+  try {
+    return jwt.verify(token, config.JWT_SECRET);
+  } catch (error) {
+    console.error('Error al verificar token JWT:', error.message);
+    return null;
+  }
+};
+
+const createAuthTokens = (user) => {
   const payload = {
     id: user.id,
     nombre: `${user.nombres} ${user.apellidos}`,
@@ -12,50 +24,34 @@ const generateToken = (user) => {
     permisos: user.permisos
   };
   
-  // Generar token de acceso
-  const accessToken = jwt.sign(payload, config.JWT_SECRET, {
-    expiresIn: config.JWT_EXPIRATION
-  });
+  const accessToken = createToken(payload);
+  const refreshToken = createToken({ id: user.id }, '7d');
   
-  // Generar refresh token para mayor seguridad
-  const refreshToken = jwt.sign(
-    { id: user.id }, 
-    config.JWT_SECRET, 
-    { expiresIn: '7d' }
-  );
-  
-  return {
-    accessToken,
-    refreshToken
-  };
+  return { accessToken, refreshToken };
 };
 
-const refreshAccessToken = async (refreshToken) => {
-  try {
-    const decoded = jwt.verify(refreshToken, config.JWT_SECRET);
-    
-    if (!decoded || !decoded.id) {
-      return null;
-    }
-    
-    // Buscar usuario por ID
-    const user = await userService.getUsers({ 
-      idUsuario: decoded.id,
-      includePermisos: true 
-    });
-    
-    if (!user) {
-      return null;
-    }
-    
-    return generateToken(user);
-  } catch (error) {
-    console.error('Error al refrescar token:', error.message);
+const refreshTokens = async (refreshToken) => {
+  const decoded = verifyToken(refreshToken);
+  
+  if (!decoded || !decoded.id) {
     return null;
   }
+  
+  const user = await userService.getUsers({ 
+    idUsuario: decoded.id,
+    includePermisos: true 
+  });
+  
+  if (!user) {
+    return null;
+  }
+  
+  return createAuthTokens(user);
 };
 
 module.exports = {
-  generateToken,
-  refreshAccessToken
+  createToken,
+  verifyToken,
+  createAuthTokens,
+  refreshTokens
 }; 

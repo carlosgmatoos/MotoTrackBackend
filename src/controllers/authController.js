@@ -39,7 +39,7 @@ const register = async (req, res) => {
     });
     
     // Generar tokens
-    const tokens = jwtService.generateToken(user);
+    const tokens = jwtService.createAuthTokens(user);
     
     res.status(201).json({
       success: true,
@@ -76,7 +76,7 @@ const login = async (req, res) => {
     }
     
     // Generar tokens
-    const tokens = jwtService.generateToken(user);
+    const tokens = jwtService.createAuthTokens(user);
     
     res.status(200).json({
       success: true,
@@ -103,7 +103,7 @@ const refreshToken = async (req, res) => {
     const { refreshToken } = req.body;
     
     // Refrescar token
-    const tokens = await jwtService.refreshAccessToken(refreshToken);
+    const tokens = await jwtService.refreshTokens(refreshToken);
     
     if (!tokens) {
       return res.status(401).json({

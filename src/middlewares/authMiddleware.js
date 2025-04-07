@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const jwtService = require('../services/jwtService');
 const config = require('../config');
 const { handleError } = require('../utils/errorHandler');
 const { validateLoginData } = require('../utils/validators');
@@ -22,7 +22,14 @@ const authMiddleware = async (req, res, next) => {
 
     // Verificar y decodificar el token
     try {
-      const decoded = jwt.verify(token, config.JWT_SECRET);
+      const decoded = jwtService.verifyToken(token);
+      
+      if (!decoded) {
+        return res.status(401).json({
+          success: false,
+          message: 'Token inválido o expirado'
+        });
+      }
       
       // Obtener información del usuario desde la base de datos
       const user = await userService.getUsers({ 

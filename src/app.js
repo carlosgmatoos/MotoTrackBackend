@@ -16,6 +16,11 @@ const municipioRouter = require('./routes/municipioRoutes');
 const ubicacionRouter = require('./routes/ubicacionRoutes');
 const personaRouter = require('./routes/personaRoutes');
 const tipoPersonaRouter = require('./routes/tipoPersonaRoutes');
+const marcaRouter = require('./routes/marcaRoutes');
+const modeloRouter = require('./routes/modeloRoutes');
+const tipoVehiculoRouter = require('./routes/tipoVehiculoRoutes');
+const seguroRouter = require('./routes/seguroRoutes');
+const vehiculoRouter = require('./routes/vehiculoRoutes');
 
 // Cargar archivo swagger.yml
 const swaggerFilePath = path.resolve(__dirname, 'swagger.yml');
@@ -64,7 +69,12 @@ app.use('/api', [
   municipioRouter,
   ubicacionRouter,
   personaRouter,
-  tipoPersonaRouter
+  tipoPersonaRouter,
+  marcaRouter,
+  modeloRouter,
+  tipoVehiculoRouter,
+  seguroRouter,
+  vehiculoRouter
 ]);
 
 // Middleware para manejar rutas no encontradas
