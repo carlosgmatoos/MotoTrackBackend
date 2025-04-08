@@ -5,8 +5,6 @@ const { authMiddleware, validateLogin, validateRegister, validateRefreshToken, i
 const userValidationMiddleware = require('../middlewares/userValidationMiddleware');
 const userRouter = express.Router();
 
-// ===== RUTAS PÚBLICAS (sin autenticación) =====
-
 userRouter.post('/register', validateRegister, userValidationMiddleware.validateUserCreation, authController.register);
 userRouter.post('/login', validateLogin, authController.login);
 userRouter.post('/refresh-token', validateRefreshToken, authController.refreshToken);
@@ -15,6 +13,11 @@ userRouter.post('/refresh-token', validateRefreshToken, authController.refreshTo
 
 // Obtener listado de usuarios (con filtros)
 userRouter.get('/user', [authMiddleware, isEmpleado], userController.getUsers);
+
+// ===== RUTAS PARA USUARIO AUTENTICADO (ciudadano) =====
+
+userRouter.put('/profile', authMiddleware, userController.updateProfile);
+userRouter.put('/changePassword', authMiddleware, userController.changePassword);
 
 // ===== RUTAS SOLO PARA ADMINISTRADORES =====
 

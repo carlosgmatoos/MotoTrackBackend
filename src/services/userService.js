@@ -275,11 +275,102 @@ const getUserById = async (userId) => {
   }
 };
 
+const updateUserProfile = async (userId, profileData) => {
+  try {
+    const { nombres, apellidos, correo, ftPerfil } = profileData;
+    
+    // Construir la consulta dinámicamente
+    let query = 'UPDATE Usuario SET ';
+    const queryParams = [];
+    const updateFields = [];
+    let paramCounter = 1;
+    
+    if (nombres) {
+      updateFields.push(`nombres = $${paramCounter}`);
+      queryParams.push(nombres);
+      paramCounter++;
+    }
+    
+    if (apellidos) {
+      updateFields.push(`apellidos = $${paramCounter}`);
+      queryParams.push(apellidos);
+      paramCounter++;
+    }
+    
+    if (correo) {
+      updateFields.push(`correo = $${paramCounter}`);
+      queryParams.push(correo);
+      paramCounter++;
+    }
+    
+    if (ftPerfil) {
+      updateFields.push(`ftPerfil = $${paramCounter}`);
+      queryParams.push(ftPerfil);
+      paramCounter++;
+    }
+    
+    // Si no hay campos para actualizar, retornar null
+    if (updateFields.length === 0) {
+      return null;
+    }
+    
+    query += updateFields.join(', ');
+    query += ` WHERE idUsuario = $${paramCounter} RETURNING idUsuario, nombres, apellidos, correo, ftPerfil`;
+    queryParams.push(userId);
+    
+    const result = await pool.query(query, queryParams);
+    
+    if (result.rows.length === 0) {
+      return null;
+    }
+    
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error al actualizar perfil de usuario:', error);
+    throw error;
+  }
+};
+
+const changePassword = async (userId, { currentPassword, newPassword }) => {
+  try {
+    // Obtener usuario actual
+    const user = await getUsers({ idUsuario: userId });
+    
+    if (!user) {
+      throw new Error('Usuario no encontrado');
+    }
+    
+    // Verificar contraseña actual
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.contrasena);
+    
+    if (!isPasswordValid) {
+      throw new Error('La contraseña actual es incorrecta');
+    }
+    
+    // Hashear la nueva contraseña
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    
+    // Actualizar contraseña
+    const result = await pool.query(
+      'UPDATE Usuario SET contrasena = $1 WHERE idUsuario = $2 RETURNING idUsuario',
+      [hashedPassword, userId]
+    );
+    
+    return result.rows.length > 0;
+  } catch (error) {
+    console.error('Error al cambiar contraseña:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   getUsers,
   authenticateUser,
   createUser,
   updateUser,
   deleteUser,
-  getUserById
+  getUserById,
+  updateUserProfile,
+  changePassword
 };

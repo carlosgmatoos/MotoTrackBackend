@@ -70,6 +70,28 @@ CREATE TABLE Ubicacion (
     idMunicipio INT REFERENCES Municipio(idMunicipio)
 );
 
+CREATE TABLE TipoUsuario (
+    idTipoUsuario SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    poderCrear BOOLEAN,
+    poderEditar BOOLEAN,
+    poderEliminar BOOLEAN,
+    estado VARCHAR(15) CHECK (estado IN ('activo', 'inactivo', 'deshabilitado')),
+    fechaCreacion DATE DEFAULT CURRENT_DATE
+);
+
+CREATE TABLE Usuario (
+    idUsuario SERIAL PRIMARY KEY,
+    nombres VARCHAR(50) NOT NULL,
+    apellidos VARCHAR(50) NOT NULL,
+    correo VARCHAR(150) UNIQUE NOT NULL,
+    contrasena TEXT NOT NULL,
+    ftPerfil TEXT,
+    estado VARCHAR(15) CHECK (estado IN ('activo', 'inactivo', 'deshabilitado')),
+    fechaCreacion DATE DEFAULT CURRENT_DATE,
+    idTipoUsuario INT REFERENCES TipoUsuario(idTipoUsuario)
+);
+
 CREATE TABLE Persona (
     idPersona SERIAL PRIMARY KEY,
     nombres VARCHAR(50) NOT NULL,
@@ -82,7 +104,8 @@ CREATE TABLE Persona (
     estado VARCHAR(15) CHECK (estado IN ('activo', 'inactivo', 'deshabilitado')),
     fechaCreacion DATE DEFAULT CURRENT_DATE,
     idUbicacion INT REFERENCES Ubicacion(idUbicacion),
-    idTipoPersona INT REFERENCES TipoPersona(idTipoPersona)
+    idTipoPersona INT REFERENCES TipoPersona(idTipoPersona),
+    idUsuario INT REFERENCES Usuario(idUsuario)
 );
 
 CREATE TABLE Vehiculo (
@@ -114,27 +137,6 @@ CREATE TABLE Solicitud (
     fechaRegistro DATE DEFAULT CURRENT_DATE,
     fechaProcesada TIMESTAMP,
     PRIMARY KEY (idPersona, idEmpleado, idVehiculo, idMatricula)
-);
-
-CREATE TABLE TipoUsuario (
-    idTipoUsuario SERIAL PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL,
-    poderCrear BOOLEAN,
-    poderEditar BOOLEAN,
-    poderEliminar BOOLEAN,
-    estado VARCHAR(15) CHECK (estado IN ('activo', 'inactivo', 'deshabilitado')),
-    fechaCreacion DATE DEFAULT CURRENT_DATE
-);
-
-CREATE TABLE Usuario (
-    idUsuario SERIAL PRIMARY KEY,
-    nombres VARCHAR(50) NOT NULL,
-    apellidos VARCHAR(50) NOT NULL,
-    correo VARCHAR(150) UNIQUE NOT NULL,
-    contrasena TEXT NOT NULL,
-    estado VARCHAR(15) CHECK (estado IN ('activo', 'inactivo', 'deshabilitado')),
-    fechaCreacion DATE DEFAULT CURRENT_DATE,
-    idTipoUsuario INT REFERENCES TipoUsuario(idTipoUsuario)
 );
 
 CREATE TABLE Notificaciones (

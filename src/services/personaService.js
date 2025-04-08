@@ -150,6 +150,7 @@ const createPersona = async (personaData) => {
     telefono,
     idUbicacion,
     idTipoPersona,
+    idUsuario,
     estado = 'activo'
   } = personaData;
   
@@ -157,9 +158,9 @@ const createPersona = async (personaData) => {
     INSERT INTO Persona (
       nombres, apellidos, cedula, fechaNacimiento, 
       estadoCivil, sexo, telefono, estado, 
-      idUbicacion, idTipoPersona
+      idUbicacion, idTipoPersona, idUsuario
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     RETURNING *
   `;
   
@@ -173,7 +174,8 @@ const createPersona = async (personaData) => {
     telefono,
     estado,
     idUbicacion,
-    idTipoPersona
+    idTipoPersona,
+    idUsuario
   ];
   
   const result = await pool.query(query, values);
@@ -216,6 +218,7 @@ const updatePersona = async (id, personaData) => {
     telefono,
     idUbicacion,
     idTipoPersona,
+    idUsuario,
     estado
   } = personaData;
   
@@ -274,6 +277,12 @@ const updatePersona = async (id, personaData) => {
   if (idTipoPersona) {
     updateFields.push(`"idTipoPersona" = $${paramCount}`);
     queryParams.push(idTipoPersona);
+    paramCount++;
+  }
+  
+  if (idUsuario) {
+    updateFields.push(`"idUsuario" = $${paramCount}`);
+    queryParams.push(idUsuario);
     paramCount++;
   }
   

@@ -96,9 +96,107 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  try {
+    // El ID del usuario lo obtenemos del token
+    const userId = req.user.id;
+    
+    const { nombres, apellidos, correo, ftPerfil } = req.body;
+    
+    // Validar correo si se proporciona
+    if (correo && !validateEmail(correo)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Correo inválido',
+        message: 'El formato del correo electrónico no es válido'
+      });
+    }
+    
+    const updatedProfile = await userService.updateUserProfile(userId, {
+      nombres,
+      apellidos,
+      correo,
+      ftPerfil
+    });
+    
+    if (!updatedProfile) {
+      return res.status(400).json({
+        success: false,
+        error: 'Datos incompletos',
+        message: 'No se proporcionaron datos para actualizar'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Perfil actualizado exitosamente',
+      data: updatedProfile
+    });
+  } catch (error) {
+    handleError(res, error, 'Error al actualizar perfil');
+  }
+};
+
+const changePassword = async (req, res) => {
+  try {
+    // El ID del usuario lo obtenemos del token
+    const userId = req.user.id;
+    
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    
+    // Validar que se proporcionaron todos los campos necesarios
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Datos incompletos',
+        message: 'Todos los campos son obligatorios'
+      });
+    }
+    
+    // Validar que las contraseñas coincidan
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Contraseñas no coinciden',
+        message: 'La nueva contraseña y su confirmación no coinciden'
+      });
+    }
+    
+    // Validar formato de la nueva contraseña
+    if (!validatePassword(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Contraseña inválida',
+        message: 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número'
+      });
+    }
+    
+    const result = await userService.changePassword(userId, {
+      currentPassword,
+      newPassword
+    });
+    
+    res.status(200).json({
+      success: true,
+      message: 'Contraseña actualizada exitosamente'
+    });
+  } catch (error) {
+    if (error.message === 'La contraseña actual es incorrecta') {
+      return res.status(400).json({
+        success: false,
+        error: 'Contraseña incorrecta',
+        message: error.message
+      });
+    }
+    handleError(res, error, 'Error al cambiar contraseña');
+  }
+};
+
 module.exports = {
   getUsers,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  updateProfile,
+  changePassword
 }; 

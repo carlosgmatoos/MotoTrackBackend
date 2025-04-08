@@ -4,7 +4,21 @@ const { handleError } = require('../utils/errorHandler');
 
 const register = async (req, res) => {
   try {
-    const { nombres, apellidos, correo, contrasena } = req.body;
+    const { nombres, apellidos, correo, contrasena, cedula } = req.body;
+    
+    // Si el registro incluye cédula, verificamos que no exista una persona con esa cédula
+    if (cedula) {
+      const personaService = require('../services/personaService');
+      const personaExistente = await personaService.getPersonaByCedula(cedula);
+      
+      if (personaExistente) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cédula en uso',
+          message: 'Esta cédula ya está registrada'
+        });
+      }
+    }
     
     // Verificar si el correo ya existe
     const existingUser = await userService.getUsers({ 
@@ -31,6 +45,23 @@ const register = async (req, res) => {
       contrasena,
       idTipoUsuario
     });
+    
+    // Si se proporcionó cédula, crear también el registro en Persona
+    if (cedula) {
+      const personaService = require('../services/personaService');
+      await personaService.createPersona({
+        nombres,
+        apellidos,
+        cedula,
+        fechaNacimiento: req.body.fechaNacimiento || new Date(),
+        estadoCivil: req.body.estadoCivil,
+        sexo: req.body.sexo,
+        telefono: req.body.telefono,
+        idUbicacion: req.body.idUbicacion,
+        idTipoPersona: 1, // Ciudadano (ajustar según tus datos)
+        idUsuario: newUser.idusuario
+      });
+    }
     
     // Obtener usuario completo con permisos
     const user = await userService.getUsers({ 

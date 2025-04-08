@@ -1653,16 +1653,16 @@ paths:
       responses:
         '200':
           description: Usuario eliminado exitosamente
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
                   success:
                     type: boolean
                     example: true
                   message:
-                    type: string
+                  type: string
                     example: "Usuario eliminado exitosamente"
         '400':
           description: Datos inválidos
@@ -1684,6 +1684,150 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /profile:
+    put:
+      tags:
+        - Usuario
+      summary: Actualizar perfil de usuario
+      description: Permite al usuario actualizar su información de perfil
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nombres:
+                  type: string
+                  example: "Juan"
+                apellidos:
+                  type: string
+                  example: "Pérez"
+                correo:
+                  type: string
+                  format: email
+                  example: "juan@example.com"
+                ftPerfil:
+                  type: string
+                  description: URL o datos base64 de la foto de perfil
+                  example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQE..."
+      responses:
+        '200':
+          description: Perfil actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Perfil actualizado exitosamente"
+                  data:
+                    type: object
+                    properties:
+                      idUsuario:
+                        type: integer
+                        example: 1
+                      nombres:
+                        type: string
+                        example: "Juan"
+                      apellidos:
+                        type: string
+                        example: "Pérez"
+                      correo:
+                        type: string
+                        example: "juan@example.com"
+                      ftPerfil:
+                        type: string
+                        example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQE..."
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /changePassword:
+    put:
+      tags:
+        - Usuario
+      summary: Cambiar contraseña
+      description: Permite al usuario cambiar su contraseña
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                currentPassword:
+                  type: string
+                  format: password
+                  example: "Contraseña1"
+                newPassword:
+                  type: string
+                  format: password
+                  example: "NuevaContraseña2"
+                confirmPassword:
+                  type: string
+                  format: password
+                  example: "NuevaContraseña2"
+              required:
+                - currentPassword
+                - newPassword
+                - confirmPassword
+      responses:
+        '200':
+          description: Contraseña actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Contraseña actualizada exitosamente"
+        '400':
+          description: Datos inválidos o contraseña actual incorrecta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
           content:
             application/json:
               schema:
@@ -1893,12 +2037,12 @@ paths:
           in: query
           description: Filtrar por ID
           schema:
-            type: integer
+                        type: integer
         - name: nombre
           in: query
           description: Filtrar por nombre
           schema:
-            type: string
+                        type: string
         - name: estado
           in: query
           description: Filtrar por estado
@@ -2028,16 +2172,16 @@ paths:
       responses:
         '200':
           description: Provincia eliminada exitosamente
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
                   success:
                     type: boolean
                     example: true
                   message:
-                    type: string
+                  type: string
                     example: "Provincia eliminada exitosamente"
         '400':
           description: Datos inválidos
@@ -2087,7 +2231,7 @@ paths:
           in: query
           description: Filtrar por nombre
           schema:
-            type: string
+                  type: string
         - name: estado
           in: query
           description: Filtrar por estado
@@ -2682,7 +2826,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  
+
   /persona/empleados:
     get:
       tags:
