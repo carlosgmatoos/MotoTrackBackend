@@ -74,6 +74,7 @@ const getUsers = async (filters = {}) => {
       correo: user.correo,
       estado: user.estado,
       fechaCreacion: user.fechacreacion,
+      ftPerfil: user.ftperfil,
       tipoUsuario: {
         id: user.idtipousuario,
         nombre: user.tipo_usuario_nombre
@@ -83,13 +84,47 @@ const getUsers = async (filters = {}) => {
       contrasena: user.contrasena
     }));
     
-    // Si se busca un usuario específico
-    if ((filters.idUsuario || (filters.correo && filters.exactMatch))) {
-      if (users.length === 0) {
-        return null; // Retornar null cuando no se encuentra el usuario
-      }
-      
+    // Si se busca un usuario específico y se encuentra
+    if ((filters.idUsuario || (filters.correo && filters.exactMatch)) && users.length > 0) {
       const user = users[0];
+      
+      // Incluir datos de persona si se solicitan
+      if (filters.includePersonaData) {
+        const personaResult = await pool.query(
+          `SELECT p.*, tp.nombre as tipo_persona_nombre,
+           u.direccion, m.nombreMunicipio, pr.nombreProvincia
+           FROM Persona p
+           LEFT JOIN TipoPersona tp ON p.idTipoPersona = tp.idTipoPersona
+           LEFT JOIN Ubicacion u ON p.idUbicacion = u.idUbicacion
+           LEFT JOIN Municipio m ON u.idMunicipio = m.idMunicipio
+           LEFT JOIN Provincia pr ON m.idProvincia = pr.idProvincia
+           WHERE p.idUsuario = $1`,
+          [user.id]
+        );
+        
+        if (personaResult.rows.length > 0) {
+          const persona = personaResult.rows[0];
+          user.datosPersonales = {
+            idPersona: persona.idpersona,
+            cedula: persona.cedula,
+            fechaNacimiento: persona.fechanacimiento,
+            estadoCivil: persona.estadocivil,
+            sexo: persona.sexo,
+            telefono: persona.telefono,
+            tipoPersona: {
+              id: persona.idtipopersona,
+              nombre: persona.tipo_persona_nombre
+            },
+            ubicacion: persona.direccion ? {
+              id: persona.idubicacion,
+              direccion: persona.direccion,
+              sector: persona.sector,
+              municipio: persona.nombremunicipio,
+              provincia: persona.nombreprovincia
+            } : null
+          };
+        }
+      }
       
       // Incluir permisos si se solicitan
       if (filters.includePermisos) {
@@ -142,10 +177,11 @@ const authenticateUser = async (email, password) => {
       return null;
     }
     
-    // Obtener usuario con permisos
+    // Obtener usuario con permisos y datos personales
     return await getUsers({ 
       idUsuario: user.id, 
-      includePermisos: true 
+      includePermisos: true,
+      includePersonaData: true 
     });
   } catch (error) {
     console.error('Error al autenticar usuario:', error);

@@ -112,6 +112,15 @@ const updateProfile = async (req, res) => {
       });
     }
     
+    // Validar la foto de perfil si se proporciona
+    if (ftPerfil && !ftPerfil.startsWith('data:image/')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Formato inválido',
+        message: 'La imagen debe estar en formato base64 (data:image/...)'
+      });
+    }
+    
     const updatedProfile = await userService.updateUserProfile(userId, {
       nombres,
       apellidos,
@@ -127,13 +136,74 @@ const updateProfile = async (req, res) => {
       });
     }
     
+    // Obtener los datos completos del usuario actualizado, incluyendo datos personales
+    const updatedUser = await userService.getUsers({
+      idUsuario: userId,
+      includePersonaData: true
+    });
+    
     res.status(200).json({
       success: true,
       message: 'Perfil actualizado exitosamente',
-      data: updatedProfile
+      data: {
+        id: updatedUser.id,
+        nombres: updatedUser.nombres,
+        apellidos: updatedUser.apellidos,
+        correo: updatedUser.correo,
+        ftPerfil: updatedUser.ftPerfil,
+        fechaCreacion: updatedUser.fechaCreacion,
+        datosPersonales: updatedUser.datosPersonales
+      }
     });
   } catch (error) {
     handleError(res, error, 'Error al actualizar perfil');
+  }
+};
+
+const updateProfilePicture = async (req, res) => {
+  try {
+    // El ID del usuario lo obtenemos del token
+    const userId = req.user.id;
+    
+    const { ftPerfil } = req.body;
+    
+    if (!ftPerfil) {
+      return res.status(400).json({
+        success: false,
+        error: 'Datos incompletos',
+        message: 'La imagen de perfil es obligatoria'
+      });
+    }
+    
+    // Validar que la cadena contenga datos de imagen
+    if (!ftPerfil.startsWith('data:image/')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Formato inválido',
+        message: 'La imagen debe estar en formato base64 (data:image/...)'
+      });
+    }
+    
+    // Actualizar solo la foto de perfil
+    const updatedProfile = await userService.updateUserProfile(userId, { ftPerfil });
+    
+    if (!updatedProfile) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado',
+        message: 'No se encontró el usuario para actualizar su foto de perfil'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Foto de perfil actualizada exitosamente',
+      data: {
+        ftPerfil: updatedProfile.ftperfil
+      }
+    });
+  } catch (error) {
+    handleError(res, error, 'Error al actualizar foto de perfil');
   }
 };
 
@@ -192,11 +262,62 @@ const changePassword = async (req, res) => {
   }
 };
 
+/**
+ * Obtiene la información del perfil del usuario utilizando su token
+ */
+const getProfileFromToken = async (req, res) => {
+  try {
+    // El ID del usuario lo obtenemos del token (ya parseado por el middleware de autenticación)
+    const userId = req.user.id;
+    
+    // Obtener información completa del usuario incluyendo datos personales y permisos
+    const user = await userService.getUsers({
+      idUsuario: userId,
+      includePermisos: true,
+      includePersonaData: true
+    });
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'Usuario no encontrado',
+        message: 'No se pudo encontrar el usuario asociado al token'
+      });
+    }
+    
+    // Preparar respuesta con datos completos
+    const profileData = {
+      id: user.id,
+      nombres: user.nombres,
+      apellidos: user.apellidos,
+      correo: user.correo,
+      ftPerfil: user.ftPerfil,
+      fechaCreacion: user.fechaCreacion,
+      role: user.role,
+      permisos: user.permisos
+    };
+    
+    // Incluir datos personales si existen
+    if (user.datosPersonales) {
+      profileData.datosPersonales = user.datosPersonales;
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: profileData
+    });
+  } catch (error) {
+    handleError(res, error, 'Error al obtener perfil del usuario');
+  }
+};
+
 module.exports = {
   getUsers,
   createUser,
   updateUser,
   deleteUser,
   updateProfile,
-  changePassword
+  updateProfilePicture,
+  changePassword,
+  getProfileFromToken
 }; 

@@ -1839,6 +1839,193 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  # Añadir a tu archivo swagger.yml
+
+  /profilePicture:
+    put:
+      tags:
+        - Usuario
+      summary: Actualizar foto de perfil
+      description: Permite al usuario actualizar su foto de perfil
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ftPerfil:
+                  type: string
+                  description: Imagen en formato base64
+                  example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQE..."
+              required:
+                - ftPerfil
+      responses:
+        '200':
+          description: Foto de perfil actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Foto de perfil actualizada exitosamente"
+                  data:
+                    type: object
+                    properties:
+                      ftPerfil:
+                        type: string
+                        example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQE..."
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /profileToken:
+    get:
+      tags:
+        - Usuario
+      summary: Obtener perfil del usuario autenticado
+      description: Devuelve información completa del perfil del usuario basada en su token de autenticación
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Perfil de usuario obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      nombres:
+                        type: string
+                        example: "Juan"
+                      apellidos:
+                        type: string
+                        example: "Pérez"
+                      correo:
+                        type: string
+                        format: email
+                        example: "juan@example.com"
+                      ftPerfil:
+                        type: string
+                        example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQE..."
+                      fechaCreacion:
+                        type: string
+                        format: date-time
+                        example: "2023-01-01T10:00:00Z"
+                      role:
+                        type: string
+                        example: "ciudadano"
+                      permisos:
+                        type: object
+                        properties:
+                          crear:
+                            type: boolean
+                            example: false
+                          editar:
+                            type: boolean
+                            example: false
+                          eliminar:
+                            type: boolean
+                            example: false
+                      datosPersonales:
+                        type: object
+                        properties:
+                          idPersona:
+                            type: integer
+                            example: 1
+                          cedula:
+                            type: string
+                            example: "001-0012345-6"
+                          fechaNacimiento:
+                            type: string
+                            format: date
+                            example: "1990-01-01"
+                          estadoCivil:
+                            type: string
+                            example: "soltero"
+                          sexo:
+                            type: string
+                            example: "M"
+                          telefono:
+                            type: string
+                            example: "8091234567"
+                          tipoPersona:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                                example: 1
+                              nombre:
+                                type: string
+                                example: "ciudadano"
+                          ubicacion:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                                example: 1
+                              direccion:
+                                type: string
+                                example: "Calle Principal #123"
+                              sector:
+                                type: string
+                                example: "Centro de la Ciudad"
+                              municipio:
+                                type: string
+                                example: "Santo Domingo Este"
+                              provincia:
+                                type: string
+                                example: "Santo Domingo"
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   # ===== RUTAS DE TIPOS DE USUARIO =====
   /tipoUsuario:
     get:

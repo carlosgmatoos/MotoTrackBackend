@@ -17,7 +17,9 @@ userRouter.get('/user', [authMiddleware, isEmpleado], userController.getUsers);
 // ===== RUTAS PARA USUARIO AUTENTICADO (ciudadano) =====
 
 userRouter.put('/profile', authMiddleware, userController.updateProfile);
+userRouter.put('/profilePicture', authMiddleware, userController.updateProfilePicture);
 userRouter.put('/changePassword', authMiddleware, userController.changePassword);
+userRouter.get('/profileToken', authMiddleware, userController.getProfileFromToken);
 
 // ===== RUTAS SOLO PARA ADMINISTRADORES =====
 

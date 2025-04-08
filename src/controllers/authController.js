@@ -109,20 +109,30 @@ const login = async (req, res) => {
     // Generar tokens
     const tokens = jwtService.createAuthTokens(user);
     
+    // Preparar respuesta con datos completos
+    const responseData = {
+      user: {
+        id: user.id,
+        nombres: user.nombres,
+        apellidos: user.apellidos,
+        correo: user.correo,
+        role: user.role,
+        fechaCreacion: user.fechaCreacion,
+        ftPerfil: user.ftPerfil,
+        permisos: user.permisos
+      },
+      ...tokens
+    };
+    
+    // Incluir datos personales si existen
+    if (user.datosPersonales) {
+      responseData.user.datosPersonales = user.datosPersonales;
+    }
+    
     res.status(200).json({
       success: true,
       message: 'Inicio de sesión exitoso',
-      data: {
-        user: {
-          id: user.id,
-          nombres: user.nombres,
-          apellidos: user.apellidos,
-          correo: user.correo,
-          role: user.role,
-          permisos: user.permisos
-        },
-        ...tokens
-      }
+      data: responseData
     });
   } catch (error) {
     handleError(res, error, 'Error al iniciar sesión');
