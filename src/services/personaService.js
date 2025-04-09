@@ -72,20 +72,22 @@ const getEmpleado = async (filtros = {}) => {
     nombres,
     apellidos,
     cedula,
-    tipoPersona = 'Empleado' || 'empleado', // Por defecto filtra por tipo "Empleado"
     estado,
     limit = 100,
     offset = 0
   } = filtros;
   
   let query = `
-    SELECT p.*, tp.nombre as tipoPersonaNombre, u.direccion, m.nombreMunicipio, pr.nombreProvincia
+    SELECT p.*, tp.nombre as tipoPersonaNombre, u.direccion, m.nombreMunicipio, pr.nombreProvincia, 
+           tu.nombre as tipoUsuarioNombre
     FROM Persona p
     LEFT JOIN TipoPersona tp ON p.idTipoPersona = tp.idTipoPersona
     LEFT JOIN Ubicacion u ON p.idUbicacion = u.idUbicacion
     LEFT JOIN Municipio m ON u.idMunicipio = m.idMunicipio
     LEFT JOIN Provincia pr ON m.idProvincia = pr.idProvincia
-    WHERE tp.nombre = 'empleado'
+    LEFT JOIN Usuario us ON p.idUsuario = us.idUsuario
+    LEFT JOIN TipoUsuario tu ON us.idTipoUsuario = tu.idTipoUsuario
+    WHERE tu.nombre = 'Empleado'
   `;
   
   const queryParams = [];
@@ -327,10 +329,63 @@ const deletePersona = async (id) => {
   return result.rows[0];
 };
 
+const getPersonaByCedula = async (cedula) => {
+  const query = `
+    SELECT * FROM Persona
+    WHERE cedula = $1 AND estado != 'deshabilitado'
+  `;
+  
+  const result = await pool.query(query, [cedula]);
+  return result.rows.length > 0 ? result.rows[0] : null;
+};
+
+const getPersonaByUsuarioId = async (usuarioId) => {
+  try {
+    const query = `
+      SELECT p.*, tp.nombre as tipoPersonaNombre, u.direccion, m.nombreMunicipio, pr.nombreProvincia
+      FROM Persona p
+      LEFT JOIN TipoPersona tp ON p.idTipoPersona = tp.idTipoPersona
+      LEFT JOIN Ubicacion u ON p.idUbicacion = u.idUbicacion
+      LEFT JOIN Municipio m ON u.idMunicipio = m.idMunicipio
+      LEFT JOIN Provincia pr ON m.idProvincia = pr.idProvincia
+      WHERE p.idUsuario = $1 AND p.estado != 'deshabilitado'
+    `;
+    
+    const result = await pool.query(query, [usuarioId]);
+    return result.rows.length > 0 ? result.rows[0] : null;
+  } catch (error) {
+    console.error(`Error al obtener persona por ID de usuario ${usuarioId}:`, error);
+    throw error;
+  }
+};
+
+const getPersonaById = async (personaId) => {
+  try {
+    const query = `
+      SELECT p.*, tp.nombre as tipoPersonaNombre, u.direccion, m.nombreMunicipio, pr.nombreProvincia
+      FROM Persona p
+      LEFT JOIN TipoPersona tp ON p.idTipoPersona = tp.idTipoPersona
+      LEFT JOIN Ubicacion u ON p.idUbicacion = u.idUbicacion
+      LEFT JOIN Municipio m ON u.idMunicipio = m.idMunicipio
+      LEFT JOIN Provincia pr ON m.idProvincia = pr.idProvincia
+      WHERE p.idPersona = $1 AND p.estado != 'deshabilitado'
+    `;
+    
+    const result = await pool.query(query, [personaId]);
+    return result.rows.length > 0 ? result.rows[0] : null;
+  } catch (error) {
+    console.error(`Error al obtener persona por ID ${personaId}:`, error);
+    throw error;
+  }
+};
+
 module.exports = {
   getAllPersonas,
   getEmpleado,
   createPersona,
   updatePersona,
-  deletePersona
+  deletePersona,
+  getPersonaByCedula,
+  getPersonaByUsuarioId,
+  getPersonaById
 }; 

@@ -113,7 +113,8 @@ const getUsers = async (filters = {}) => {
             telefono: persona.telefono,
             tipoPersona: {
               id: persona.idtipopersona,
-              nombre: persona.tipo_persona_nombre
+              nombre: persona.tipo_persona_nombre,
+              cargo: persona.tipo_persona_nombre // El nombre ahora representa el cargo/rol
             },
             ubicacion: persona.direccion ? {
               id: persona.idubicacion,
@@ -149,6 +150,11 @@ const getUsers = async (filters = {}) => {
       }
       
       return user;
+    }
+    
+    // Si se estaba buscando un usuario específico por correo exacto pero no se encontró, retornar null
+    if (filters.correo && filters.exactMatch && users.length === 0) {
+      return null;
     }
     
     return users;

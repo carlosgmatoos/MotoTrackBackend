@@ -34,14 +34,14 @@ CREATE TABLE Seguro (
 
 CREATE TABLE Matricula (
     idMatricula SERIAL PRIMARY KEY,
-    matriculaGenerada VARCHAR(7) NOT NULL,
-	estado VARCHAR(15) CHECK (estado IN ('generada', 'pendiente', 'cancelada', 'transferida')),
+    matriculaGenerada VARCHAR(8) NOT NULL,
+	estado VARCHAR(15) CHECK (estado IN ('Generada', 'Pendiente', 'Cancelada', 'Transferida')),
     fechaEmisionMatricula DATE NOT NULL
 );
 
 CREATE TABLE TipoPersona (
     idTipoPersona SERIAL PRIMARY KEY,
-    nombre VARCHAR(15) CHECK (nombre IN ('ciudadano', 'empleado', 'administrador')),
+    nombre VARCHAR(30) NOT NULL,
     estado VARCHAR(15) CHECK (estado IN ('activo', 'inactivo', 'deshabilitado')),
 	fechaCreacion DATE DEFAULT CURRENT_DATE
 );
@@ -72,7 +72,7 @@ CREATE TABLE Ubicacion (
 
 CREATE TABLE TipoUsuario (
     idTipoUsuario SERIAL PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL,
+    nombre VARCHAR(15) CHECK (nombre IN ('Ciudadano', 'Empleado', 'Administrador')),
     poderCrear BOOLEAN,
     poderEditar BOOLEAN,
     poderEliminar BOOLEAN,
@@ -111,7 +111,7 @@ CREATE TABLE Persona (
 CREATE TABLE Vehiculo (
     idVehiculo SERIAL PRIMARY KEY,
     chasis VARCHAR(17) NOT NULL,
-    tipoUso VARCHAR(15) NOT NULL CHECK (tipoUso IN ('personal', 'recreativo', 'transporte', 'deportivo', 'empresarial')),
+    tipoUso VARCHAR(15) NOT NULL CHECK (tipoUso IN ('Personal', 'Recreativo', 'Transporte', 'Deportivo', 'Empresarial')),
     estado VARCHAR(15) CHECK (estado IN ('activo', 'inactivo', 'deshabilitado')),
     fechaCreacion DATE DEFAULT CURRENT_DATE,
     idModelo INT REFERENCES Modelo(idModelo),
@@ -130,7 +130,7 @@ CREATE TABLE Solicitud (
     docLicencia TEXT,
     docSeguro TEXT,
     docFacturaVehiculo TEXT,
-    estadoDecision VARCHAR(15) CHECK (estadoDecision IN ('pendiente', 'aprobada', 'rechazada')),
+    estadoDecision VARCHAR(15) CHECK (estadoDecision IN ('Pendiente', 'Aprobada', 'Rechazada')),
     motivoRechazo TEXT,
     notaRevision TEXT,
     detalleRechazo TEXT,
@@ -143,7 +143,7 @@ CREATE TABLE Notificaciones (
     idNotificacion SERIAL PRIMARY KEY,
     mensaje TEXT NOT NULL,
     titulo VARCHAR(75) NOT NULL,
-    estado VARCHAR(15) CHECK (estado IN ('pendiente', 'enviada', 'leida', 'confirmada', 'cancelada', 'error')),
+    estado VARCHAR(15) CHECK (estado IN ('Pendiente', 'Enviada', 'Leida', 'Confirmada', 'Cancelada', 'Error')),
     fechaCreacion DATE DEFAULT CURRENT_DATE,
     idUsuario INT REFERENCES Usuario(idUsuario)
 );

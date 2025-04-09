@@ -1,6 +1,10 @@
 const userService = require('../services/userService');
 const jwtService = require('../services/jwtService');
 const { handleError } = require('../utils/errorHandler');
+const tipoUsuarioService = require('../services/tipoUsuarioService');
+const tipoPersonaService = require('../services/tipoPersonaService');
+const personaService = require('../services/personaService');
+
 
 const register = async (req, res) => {
   try {
@@ -8,7 +12,6 @@ const register = async (req, res) => {
     
     // Si el registro incluye cédula, verificamos que no exista una persona con esa cédula
     if (cedula) {
-      const personaService = require('../services/personaService');
       const personaExistente = await personaService.getPersonaByCedula(cedula);
       
       if (personaExistente) {
@@ -26,6 +29,7 @@ const register = async (req, res) => {
       exactMatch: true 
     });
     
+    // Si existingUser no es null, significa que se encontró un usuario con ese correo
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -34,8 +38,17 @@ const register = async (req, res) => {
       });
     }
     
-    // Por defecto, los usuarios registrados son clientes
-    const idTipoUsuario = 3; // Cliente
+    // Por defecto, los usuarios registrados son Ciudadanos
+    // Obtenemos el tipo de usuario 'Ciudadano'
+    const tipoUsuario = await tipoUsuarioService.getTipoUsuarioByNombre('Ciudadano');
+    
+    if (!tipoUsuario) {
+      return res.status(500).json({
+        success: false,
+        error: 'Error de configuración',
+        message: 'No se pudo encontrar el tipo de usuario para ciudadanos'
+      });
+    }
     
     // Crear el usuario
     const newUser = await userService.createUser({
@@ -43,12 +56,15 @@ const register = async (req, res) => {
       apellidos,
       correo,
       contrasena,
-      idTipoUsuario
+      idTipoUsuario: tipoUsuario.id
     });
     
     // Si se proporcionó cédula, crear también el registro en Persona
     if (cedula) {
-      const personaService = require('../services/personaService');
+      
+      // Obtener tipo de persona para ciudadanos (cargo por defecto)
+      const tipoPersona = await tipoPersonaService.getTipoPersonaByNombre('General');
+      
       await personaService.createPersona({
         nombres,
         apellidos,
@@ -58,7 +74,7 @@ const register = async (req, res) => {
         sexo: req.body.sexo,
         telefono: req.body.telefono,
         idUbicacion: req.body.idUbicacion,
-        idTipoPersona: 1, // Ciudadano (ajustar según tus datos)
+        idTipoPersona: tipoPersona ? tipoPersona.idtipopersona : null,
         idUsuario: newUser.idusuario
       });
     }

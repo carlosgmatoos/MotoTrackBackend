@@ -13,11 +13,6 @@ const getAllTiposPersona = async () => {
 const createTipoPersona = async (tipoData) => {
   const { nombre, estado = 'activo' } = tipoData;
   
-  // Validar que el nombre sea uno de los valores permitidos
-  if (!['ciudadano', 'empleado', 'administrador'].includes(nombre)) {
-    throw new Error('El nombre del tipo de persona debe ser ciudadano, empleado o administrador');
-  }
-  
   const query = `
     INSERT INTO TipoPersona (nombre, estado)
     VALUES ($1, $2)
@@ -40,11 +35,6 @@ const updateTipoPersona = async (id, tipoData) => {
   
   if (checkResult.rows.length === 0) {
     throw new Error('Tipo de persona no encontrado');
-  }
-  
-  // Validar que el nombre sea uno de los valores permitidos si se proporciona
-  if (nombre && !['ciudadano', 'empleado', 'administrador'].includes(nombre)) {
-    throw new Error('El nombre del tipo de persona debe ser ciudadano, empleado o administrador');
   }
   
   let updateFields = [];
@@ -98,9 +88,25 @@ const deleteTipoPersona = async (id) => {
   return result.rows[0];
 };
 
+const getTipoPersonaByNombre = async (nombre) => {
+  try {
+    const query = `
+      SELECT * FROM TipoPersona
+      WHERE nombre = $1 AND estado = 'activo'
+    `;
+    
+    const result = await pool.query(query, [nombre]);
+    return result.rows.length > 0 ? result.rows[0] : null;
+  } catch (error) {
+    console.error(`Error al obtener tipo de persona por nombre "${nombre}":`, error);
+    throw error;
+  }
+};
+
 module.exports = {
   getAllTiposPersona,
   createTipoPersona,
   updateTipoPersona,
-  deleteTipoPersona
+  deleteTipoPersona,
+  getTipoPersonaByNombre
 }; 

@@ -5,10 +5,11 @@ const { authMiddleware, validateLogin, validateRegister, validateRefreshToken, i
 const userValidationMiddleware = require('../middlewares/userValidationMiddleware');
 const userRouter = express.Router();
 
+// ===== RUTAS PÚBLICAS =====
+
 userRouter.post('/register', validateRegister, userValidationMiddleware.validateUserCreation, authController.register);
 userRouter.post('/login', validateLogin, authController.login);
 userRouter.post('/refresh-token', validateRefreshToken, authController.refreshToken);
-
 // ===== RUTAS PARA EMPLEADOS Y ADMINISTRADORES =====
 
 // Obtener listado de usuarios (con filtros)

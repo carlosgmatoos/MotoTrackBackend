@@ -183,16 +183,17 @@ const validateUbicacionData = (data) => {
 const validatePersona = (persona) => {
   const errors = [];
   
-  if (!persona.nombres) {
-    errors.push("Los nombres son requeridos");
-  } else if (typeof persona.nombres !== 'string' || persona.nombres.trim().length < 2) {
-    errors.push("Los nombres deben ser un texto de al menos 2 caracteres");
+  // Nombres y apellidos son opcionales ya que se pueden obtener del usuario autenticado
+  if (persona.nombres !== undefined) {
+    if (typeof persona.nombres !== 'string' || persona.nombres.trim().length < 2) {
+      errors.push("Los nombres deben ser un texto de al menos 2 caracteres");
+    }
   }
   
-  if (!persona.apellidos) {
-    errors.push("Los apellidos son requeridos");
-  } else if (typeof persona.apellidos !== 'string' || persona.apellidos.trim().length < 2) {
-    errors.push("Los apellidos deben ser un texto de al menos 2 caracteres");
+  if (persona.apellidos !== undefined) {
+    if (typeof persona.apellidos !== 'string' || persona.apellidos.trim().length < 2) {
+      errors.push("Los apellidos deben ser un texto de al menos 2 caracteres");
+    }
   }
   
   if (!persona.cedula) {
@@ -519,8 +520,8 @@ const validateVehiculoData = (data) => {
     errors.push('El tipo de uso es obligatorio');
   } else if (typeof data.tipoUso !== 'string') {
     errors.push('El tipo de uso debe ser texto');
-  } else if (!['personal', 'recreativo', 'transporte', 'deportivo', 'empresarial'].includes(data.tipoUso)) {
-    errors.push('El tipo de uso debe ser "personal", "recreativo", "transporte", "deportivo" o "empresarial"');
+  } else if (!['Personal', 'Recreativo', 'Transporte', 'Deportivo', 'Empresarial'].includes(data.tipoUso)) {
+    errors.push('El tipo de uso debe ser "Personal", "Recreativo", "Transporte", "Deportivo" o "Empresarial"');
   }
   
   // Validar ID del modelo

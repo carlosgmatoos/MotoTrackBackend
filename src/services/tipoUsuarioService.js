@@ -32,6 +32,11 @@ const createTipoUsuario = async (tipoData) => {
   try {
     const { nombre, descripcion, poderCrear, poderEditar, poderEliminar } = tipoData;
     
+    // Validar que el nombre sea uno de los valores permitidos
+    if (!['Ciudadano', 'Empleado', 'Administrador'].includes(nombre)) {
+      throw new Error('El nombre del tipo de usuario debe ser Ciudadano, Empleado o Administrador');
+    }
+    
     const result = await pool.query(
       `INSERT INTO TipoUsuario 
        (nombre, descripcion, poderCrear, poderEditar, poderEliminar) 
@@ -64,6 +69,11 @@ const createTipoUsuario = async (tipoData) => {
 const updateTipoUsuario = async (tipoId, tipoData) => {
   try {
     const { nombre, descripcion, poderCrear, poderEditar, poderEliminar } = tipoData;
+    
+    // Validar que el nombre sea uno de los valores permitidos si se proporciona
+    if (nombre && !['Ciudadano', 'Empleado', 'Administrador'].includes(nombre)) {
+      throw new Error('El nombre del tipo de usuario debe ser Ciudadano, Empleado o Administrador');
+    }
     
     const result = await pool.query(
       `UPDATE TipoUsuario 
@@ -120,9 +130,43 @@ const deleteTipoUsuario = async (tipoId) => {
   }
 };
 
+/**
+ * Obtiene un tipo de usuario por su nombre
+ */
+const getTipoUsuarioByNombre = async (nombre) => {
+  try {
+    const query = `
+      SELECT * FROM TipoUsuario 
+      WHERE nombre = $1 AND estado = 'activo'
+    `;
+    
+    const result = await pool.query(query, [nombre]);
+    
+    if (result.rows.length === 0) {
+      return null;
+    }
+    
+    const tipo = result.rows[0];
+    return {
+      id: tipo.idtipousuario,
+      nombre: tipo.nombre,
+      descripcion: tipo.descripcion,
+      permisos: {
+        crear: tipo.podercrear,
+        editar: tipo.podereditar,
+        eliminar: tipo.podereliminar
+      }
+    };
+  } catch (error) {
+    console.error(`Error al obtener tipo de usuario por nombre "${nombre}":`, error);
+    throw error;
+  }
+};
+
 module.exports = {
   getAllTiposUsuario,
   createTipoUsuario,
   updateTipoUsuario,
-  deleteTipoUsuario
+  deleteTipoUsuario,
+  getTipoUsuarioByNombre
 }; 
