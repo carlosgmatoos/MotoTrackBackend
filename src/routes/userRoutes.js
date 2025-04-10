@@ -15,6 +15,9 @@ userRouter.post('/refresh-token', validateRefreshToken, authController.refreshTo
 // Obtener listado de usuarios (con filtros)
 userRouter.get('/user', [authMiddleware, isEmpleado], userController.getUsers);
 
+// Obtener listado de usuarios administradores y empleados
+userRouter.get('/adminEmployees', [authMiddleware, isEmpleado], userController.getAdminAndEmployeeUsers);
+
 // ===== RUTAS PARA USUARIO AUTENTICADO (ciudadano) =====
 
 userRouter.put('/profile', authMiddleware, userController.updateProfile);

@@ -14,6 +14,4 @@ personaRouter.get('/persona', [authMiddleware, isEmpleado], personaController.ge
 // Rutas protegidas (solo admin)
 personaRouter.delete('/persona', [authMiddleware, isAdmin], personaController.deletePersona);
 
-personaRouter.get('/persona/empleados', [authMiddleware, isAdmin], personaController.getEmpleados);
-
 module.exports = personaRouter; 

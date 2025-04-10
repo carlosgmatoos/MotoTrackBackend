@@ -89,7 +89,7 @@ const deleteUser = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      message: 'Usuario deshabilitado exitosamente'
+      message: 'Usuario y datos personales deshabilitados exitosamente'
     });
   } catch (error) {
     handleError(res, error, 'Error al deshabilitar usuario');
@@ -311,6 +311,31 @@ const getProfileFromToken = async (req, res) => {
   }
 };
 
+const getAdminAndEmployeeUsers = async (req, res) => {
+  try {
+    // Extraer filtros de la consulta
+    const { nombres, apellidos, cedula, cargo, estado } = req.query;
+    
+    // Construir objeto de filtros
+    const filters = {};
+    if (nombres) filters.nombres = nombres;
+    if (apellidos) filters.apellidos = apellidos;
+    if (cedula) filters.cedula = cedula;
+    if (cargo) filters.cargo = cargo;
+    if (estado) filters.estado = estado;
+    
+    const users = await userService.getAdminAndEmployeeUsers(filters);
+    
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      data: users
+    });
+  } catch (error) {
+    handleError(res, error, 'Error al obtener usuarios administradores y empleados');
+  }
+};
+
 module.exports = {
   getUsers,
   createUser,
@@ -319,5 +344,6 @@ module.exports = {
   updateProfile,
   updateProfilePicture,
   changePassword,
-  getProfileFromToken
+  getProfileFromToken,
+  getAdminAndEmployeeUsers
 }; 

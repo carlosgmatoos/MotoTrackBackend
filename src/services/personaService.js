@@ -67,69 +67,6 @@ const getAllPersonas = async (filtros = {}) => {
   return result.rows;
 };
 
-const getEmpleado = async (filtros = {}) => {
-  const {
-    nombres,
-    apellidos,
-    cedula,
-    estado,
-    limit = 100,
-    offset = 0
-  } = filtros;
-  
-  let query = `
-    SELECT p.*, tp.nombre as tipoPersonaNombre, u.direccion, m.nombreMunicipio, pr.nombreProvincia, 
-           tu.nombre as tipoUsuarioNombre
-    FROM Persona p
-    LEFT JOIN TipoPersona tp ON p.idTipoPersona = tp.idTipoPersona
-    LEFT JOIN Ubicacion u ON p.idUbicacion = u.idUbicacion
-    LEFT JOIN Municipio m ON u.idMunicipio = m.idMunicipio
-    LEFT JOIN Provincia pr ON m.idProvincia = pr.idProvincia
-    LEFT JOIN Usuario us ON p.idUsuario = us.idUsuario
-    LEFT JOIN TipoUsuario tu ON us.idTipoUsuario = tu.idTipoUsuario
-    WHERE tu.nombre = 'Empleado'
-  `;
-  
-  const queryParams = [];
-  let paramCount = 1;
-  
-  if (nombres) {
-    query += ` AND p.nombres ILIKE $${paramCount}`;
-    queryParams.push(`%${nombres}%`);
-    paramCount++;
-  }
-  
-  if (apellidos) {
-    query += ` AND p.apellidos ILIKE $${paramCount}`;
-    queryParams.push(`%${apellidos}%`);
-    paramCount++;
-  }
-  
-  if (cedula) {
-    query += ` AND p.cedula ILIKE $${paramCount}`;
-    queryParams.push(`%${cedula}%`);
-    paramCount++;
-  }
-  
-  if (estado) {
-    query += ` AND p.estado = $${paramCount}`;
-    queryParams.push(estado);
-    paramCount++;
-  } else {
-    query += ` AND p.estado != 'deshabilitado'`;
-  }
-  
-  query += ` ORDER BY p.idPersona`;
-  
-  if (limit !== null && offset !== null) {
-    query += ` LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
-    queryParams.push(parseInt(limit), parseInt(offset));
-  }
-  
-  const result = await pool.query(query, queryParams);
-  return result.rows;
-};
-
 const createPersona = async (personaData) => {
   // Verificar si ya existe una persona con esa cédula
   const checkQuery = `
@@ -312,21 +249,52 @@ const updatePersona = async (id, personaData) => {
 };
 
 const deletePersona = async (id) => {
-  // Marcar como deshabilitado en lugar de eliminar
-  const query = `
-    UPDATE Persona
-    SET estado = 'deshabilitado'
-    WHERE idPersona = $1
-    RETURNING *
-  `;
-  
-  const result = await pool.query(query, [id]);
-  
-  if (result.rows.length === 0) {
-    throw new Error('Persona no encontrada');
+  try {
+    // Start a transaction to ensure both operations succeed or fail together
+    await pool.query('BEGIN');
+    
+    try {
+      // First, check if the persona record exists and get its user ID
+      const personaResult = await pool.query(
+        'SELECT idUsuario FROM Persona WHERE idPersona = $1',
+        [id]
+      );
+      
+      if (personaResult.rows.length === 0) {
+        throw new Error('Persona no encontrada');
+      }
+      
+      // Disable the persona record
+      const result = await pool.query(
+        `UPDATE Persona
+         SET estado = 'deshabilitado'
+         WHERE idPersona = $1
+         RETURNING *`,
+        [id]
+      );
+      
+      // If there's an associated User, mark it as disabled too
+      const idUsuario = personaResult.rows[0].idusuario;
+      if (idUsuario) {
+        await pool.query(
+          'UPDATE Usuario SET estado = $1 WHERE idUsuario = $2',
+          ['deshabilitado', idUsuario]
+        );
+      }
+      
+      // Commit the transaction if everything succeeded
+      await pool.query('COMMIT');
+      
+      return result.rows[0];
+    } catch (error) {
+      // If there's any error, roll back the transaction
+      await pool.query('ROLLBACK');
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error al deshabilitar persona:', error);
+    throw error;
   }
-  
-  return result.rows[0];
 };
 
 const getPersonaByCedula = async (cedula) => {
@@ -381,7 +349,6 @@ const getPersonaById = async (personaId) => {
 
 module.exports = {
   getAllPersonas,
-  getEmpleado,
   createPersona,
   updatePersona,
   deletePersona,

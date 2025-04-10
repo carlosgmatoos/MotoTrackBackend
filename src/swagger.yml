@@ -1466,6 +1466,114 @@ components:
           items:
             $ref: '#/components/schemas/Vehiculo'
 
+    # Adding AdminEmployeeUsers schema
+    AdminEmployeeUsersResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          example: 5
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 1
+              nombres:
+                type: string
+                example: "Admin"
+              apellidos:
+                type: string
+                example: "Principal"
+              estado:
+                type: string
+                example: "activo"
+              fechaCreacion:
+                type: string
+                format: date-time
+                example: "2023-01-01T10:00:00Z"
+              ftPerfil:
+                type: string
+                example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQE..."
+              tipoUsuario:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  nombre:
+                    type: string
+                    example: "Administrador"
+              datosPersonales:
+                type: object
+                properties:
+                  idPersona:
+                    type: integer
+                    example: 1
+                  cedula:
+                    type: string
+                    example: "001-0012345-6"
+                  fechaNacimiento:
+                    type: string
+                    format: date
+                    example: "1990-01-01"
+                  estadoCivil:
+                    type: string
+                    example: "soltero"
+                  sexo:
+                    type: string
+                    example: "M"
+                  telefono:
+                    type: string
+                    example: "8091234567"
+                  tipoPersona:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      nombre:
+                        type: string
+                        example: "Administrador"
+                  ubicacion:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      direccion:
+                        type: string
+                        example: "Calle Principal #123"
+                      sector:
+                        type: string
+                        example: "Centro de la Ciudad"
+                      municipio:
+                        type: string
+                        example: "Santo Domingo Este"
+                      provincia:
+                        type: string
+                        example: "Santo Domingo"
+              permisos:
+                type: object
+                properties:
+                  crear:
+                    type: boolean
+                    example: true
+                  editar:
+                    type: boolean
+                    example: true
+                  eliminar:
+                    type: boolean
+                    example: true
+              role:
+                type: string
+                example: "administrador"
+
 
 
 paths:
@@ -1507,7 +1615,7 @@ paths:
       tags:
         - Autenticación
       summary: Iniciar sesión
-      description: Autentica un usuario y devuelve tokens de acceso
+      description: Autentica un usuario y devuelve tokens de acceso. Solo los usuarios con estado 'activo' pueden iniciar sesión.
       requestBody:
         required: true
         content:
@@ -1528,7 +1636,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '401':
-          description: Credenciales inválidas
+          description: Credenciales inválidas o usuario inactivo/deshabilitado
           content:
             application/json:
               schema:
@@ -1737,7 +1845,7 @@ paths:
       tags:
         - Usuarios
       summary: Eliminar usuario
-      description: Elimina un usuario existente (solo para administradores)
+      description: Elimina un usuario existente y su registro de Persona asociado si existe (marcando ambos como 'deshabilitado') (solo para administradores)
       security:
         - BearerAuth: []
       requestBody:
@@ -1748,7 +1856,7 @@ paths:
               $ref: '#/components/schemas/UserDeleteRequest'
       responses:
         '200':
-          description: Usuario eliminado exitosamente
+          description: Usuario y registro de persona asociado eliminados exitosamente
         content:
           application/json:
             schema:
@@ -1759,7 +1867,7 @@ paths:
                     example: true
                   message:
                   type: string
-                    example: "Usuario eliminado exitosamente"
+                    example: "Usuario y datos personales deshabilitados exitosamente"
         '400':
           description: Datos inválidos
           content:
@@ -3040,7 +3148,7 @@ paths:
       tags:
         - Personas
       summary: Delete persona
-      description: Deletes a persona. Prevents deletion if associated with an active user.
+      description: Desactiva una persona y el usuario asociado si existe (marcando ambos como 'deshabilitado'). Previene la eliminación si está asociada a otro registro activo.
       security:
         - BearerAuth: []
       requestBody:
@@ -4342,6 +4450,68 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Vehículo no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Adding path for admin-employees endpoint after the /user path
+  /adminEmployees:
+    get:
+      tags:
+        - Usuarios
+      summary: Obtener administradores y empleados
+      description: Obtiene una lista de todos los usuarios que son administradores o empleados, incluyendo su información personal (solo para empleados y administradores)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: nombres
+          in: query
+          description: Filtrar por nombres
+          schema:
+            type: string
+        - name: apellidos
+          in: query
+          description: Filtrar por apellidos
+          schema:
+            type: string
+        - name: cedula
+          in: query
+          description: Filtrar por número de cédula
+          schema:
+            type: string
+        - name: cargo
+          in: query
+          description: Filtrar por cargo o tipo de persona
+          schema:
+            type: string
+        - name: estado
+          in: query
+          description: Filtrar por estado del usuario
+          schema:
+            type: string
+            enum: [activo, inactivo, deshabilitado]
+      responses:
+        '200':
+          description: Lista de administradores y empleados obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminEmployeeUsersResponse'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
           content:
             application/json:
               schema:

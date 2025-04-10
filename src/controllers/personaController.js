@@ -192,28 +192,9 @@ const deletePersona = async (req, res) => {
   }
 };
 
-const getEmpleados = async (req, res) => {
-  try {
-    // Utilizamos directamente la función getEmpleado del servicio
-    const filtros = req.query;
-    
-    const empleados = await personaService.getEmpleado(filtros);
-    
-    return res.status(200).json({
-      success: true,
-      data: empleados,
-      count: empleados.length,
-      message: 'Lista de empleados obtenida con éxito'
-    });
-  } catch (error) {
-    return handleError(res, error);
-  }
-};
-
 module.exports = {
   getPersonas,
   createPersona,
   updatePersona,
-  deletePersona,
-  getEmpleados
+  deletePersona
 }; 
