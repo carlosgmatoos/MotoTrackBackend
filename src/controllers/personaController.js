@@ -210,49 +210,10 @@ const getEmpleados = async (req, res) => {
   }
 };
 
-const getOwnProfile = async (req, res) => {
-  try {
-    // Verificar que hay un usuario autenticado
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({
-        success: false,
-        error: 'No autorizado',
-        message: 'Debe iniciar sesión para ver su perfil'
-      });
-    }
-    
-    // Buscar el perfil personal del usuario
-    const perfil = await personaService.getPersonaByUsuarioId(req.user.id);
-    
-    if (!perfil) {
-      return res.status(404).json({
-        success: false,
-        error: 'Perfil no encontrado',
-        message: 'No se ha creado un perfil personal para este usuario',
-        userData: {
-          id: req.user.id,
-          nombres: req.user.nombres,
-          apellidos: req.user.apellidos,
-          correo: req.user.correo
-        }
-      });
-    }
-    
-    return res.status(200).json({
-      success: true,
-      message: 'Perfil personal recuperado exitosamente',
-      data: perfil
-    });
-  } catch (error) {
-    return handleError(res, error);
-  }
-};
-
 module.exports = {
   getPersonas,
   createPersona,
   updatePersona,
   deletePersona,
-  getEmpleados,
-  getOwnProfile
+  getEmpleados
 }; 
