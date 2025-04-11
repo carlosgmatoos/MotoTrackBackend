@@ -160,6 +160,41 @@ components:
         idTipoUsuario:
           type: integer
           example: 2
+        datosPersonales:
+          type: object
+          description: Datos personales del usuario (opcional)
+          properties:
+            cedula:
+              type: string
+              example: "40212345678"
+              description: Cédula de identidad (11 dígitos)
+            fechaNacimiento:
+              type: string
+              format: date
+              example: "1990-01-15"
+              description: Fecha de nacimiento
+            estadoCivil:
+              type: string
+              enum: [soltero, casado, divorciado, viudo]
+              example: "soltero"
+              description: Estado civil
+            sexo:
+              type: string
+              enum: [M, F]
+              example: "M"
+              description: Sexo (M o F)
+            telefono:
+              type: string
+              example: "8091234567"
+              description: Número de teléfono (10 dígitos)
+            idUbicacion:
+              type: integer
+              example: 1
+              description: ID de la ubicación relacionada
+            idTipoPersona:
+              type: integer
+              example: 2
+              description: ID del tipo de persona
 
     UserUpdateRequest:
       type: object
@@ -185,11 +220,48 @@ components:
           example: "NuevaContraseña123"
         estado:
           type: string
-          enum: [activo, inactivo,deshabilitado]
-          example: "activo"
+          enum: [activo, inactivo, deshabilitado]
         idTipoUsuario:
           type: integer
-          example: 2
+        datosPersonales:
+          type: object
+          description: Datos personales del usuario (opcional)
+          properties:
+            idPersona:
+              type: integer
+              example: 5
+              description: ID de la persona si ya existe
+            cedula:
+              type: string
+              example: "40212345678"
+              description: Cédula de identidad (11 dígitos)
+            fechaNacimiento:
+              type: string
+              format: date
+              example: "1990-01-15"
+              description: Fecha de nacimiento
+            estadoCivil:
+              type: string
+              enum: [soltero, casado, divorciado, viudo]
+              example: "soltero"
+              description: Estado civil
+            sexo:
+              type: string
+              enum: [M, F]
+              example: "M"
+              description: Sexo (M o F)
+            telefono:
+              type: string
+              example: "8091234567"
+              description: Número de teléfono (10 dígitos)
+            idUbicacion:
+              type: integer
+              example: 1
+              description: ID de la ubicación relacionada
+            idTipoPersona:
+              type: integer
+              example: 2
+              description: ID del tipo de persona
 
     UserDeleteRequest:
       type: object
@@ -626,9 +698,11 @@ components:
           example: "1990-01-15"
         estadoCivil:
           type: string
+          enum: [soltero, casado, divorciado, viudo]
           example: "soltero"
         sexo:
           type: string
+          enum: [M, F]
           example: "M"
         telefono:
           type: string
@@ -637,15 +711,37 @@ components:
           type: string
           enum: [activo, inactivo, deshabilitado]
           example: "activo"
-        idUbicacion:
+        idUsuario:
           type: integer
-          example: 1
-        idTipoPersona:
-          type: integer
-          example: 1
-        tipoPersonaNombre:
-          type: string
-          example: "Ciudadano"
+          example: 5
+          description: ID del usuario asociado a esta persona
+        tipoPersona:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            nombre:
+              type: string
+              example: "Ciudadano"
+        ubicacion:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            direccion:
+              type: string
+              example: "Calle Principal #123"
+            sector:
+              type: string
+              example: "Los Mina"
+            municipio:
+              type: string
+              example: "Santo Domingo Este"
+            provincia:
+              type: string
+              example: "Santo Domingo"
 
     PersonaInput:
       type: object
@@ -721,39 +817,63 @@ components:
     PersonaCreateRequest:
       type: object
       required:
+        - nombres
+        - apellidos
         - cedula
-        - fechaNacimiento
       properties:
         nombres:
           type: string
-          example: "Carlos"
+          example: "Juan"
         apellidos:
           type: string
-          example: "Guerrero"
+          example: "Pérez"
         cedula:
           type: string
-          example: "1234567890123"
+          example: "40212345678"
         fechaNacimiento:
           type: string
           format: date
-          example: "1990-01-01"
+          example: "1990-01-15"
         estadoCivil:
           type: string
-          example: "Soltero(a)"
+          enum: [soltero, casado, divorciado, viudo]
+          example: "soltero"
         sexo:
           type: string
           enum: [M, F]
           example: "M"
         telefono:
           type: string
-          example: "1234567890"
+          example: "8091234567"
         idUbicacion:
           type: integer
           example: 1
-        cargo:
-          type: string
-          description: "Role/position for employee profiles"
-          example: "Oficial"
+        idTipoPersona:
+          type: integer
+          example: 1
+        idUsuario:
+          type: integer
+          description: ID del usuario al que se asociará la persona (opcional)
+          example: 5
+        crearUsuario:
+          type: boolean
+          description: Indica si se debe crear un nuevo usuario junto con la persona
+          example: true
+        datosUsuario:
+          type: object
+          description: Datos para el nuevo usuario (obligatorio si crearUsuario es true)
+          properties:
+            correo:
+              type: string
+              format: email
+              example: "juan@example.com"
+            contrasena:
+              type: string
+              format: password
+              example: "Contraseña123"
+            idTipoUsuario:
+              type: integer
+              example: 3
 
     PersonaUpdateRequest:
       type: object
@@ -763,33 +883,40 @@ components:
         idPersona:
           type: integer
           example: 1
+        nombres:
+          type: string
+          example: "Juan"
+        apellidos:
+          type: string
+          example: "Pérez"
         cedula:
           type: string
-          example: "1234567890123"
+          example: "40212345678"
         fechaNacimiento:
           type: string
           format: date
-          example: "1990-01-01"
+          example: "1990-01-15"
         estadoCivil:
           type: string
-          example: "Casado(a)"
+          enum: [soltero, casado, divorciado, viudo]
+          example: "soltero"
         sexo:
           type: string
           enum: [M, F]
           example: "M"
         telefono:
           type: string
-          example: "1234567890"
+          example: "8091234567"
         idUbicacion:
           type: integer
           example: 1
-        estado:
-          type: string
-          enum: [activo, inactivo, deshabilitado]
-          example: "activo"
         idTipoPersona:
           type: integer
           example: 1
+        actualizarUsuario:
+          type: boolean
+          description: Indica si se debe actualizar también el usuario asociado
+          example: true
 
     AuthResponse:
       type: object
@@ -1574,6 +1701,157 @@ components:
                 type: string
                 example: "administrador"
 
+    FileUploadResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Archivo subido exitosamente"
+        data:
+          type: object
+          properties:
+            url:
+              type: string
+              example: "https://supabase.storage.url/uploads/1234567890-archivo.jpg"
+            fileName:
+              type: string
+              example: "uploads/1234567890-archivo.jpg"
+            userId:
+              type: integer
+              example: 1
+              description: "ID del usuario (solo para tipo 'perfil')"
+            solicitudId:
+              type: integer
+              example: 2
+              description: "ID de la solicitud (solo para documentos)"
+            documentType:
+              type: string
+              example: "cedula"
+              description: "Tipo de documento (solo para documentos)"
+            type:
+              type: string
+              enum: [perfil, documento]
+              example: "documento"
+              description: "Tipo de archivo subido"
+
+    PersonaDeleteRequest:
+      type: object
+      required:
+        - idPersona
+      properties:
+        idPersona:
+          type: integer
+          example: 1
+        deshabilitarUsuario:
+          type: boolean
+          description: Indica si se debe deshabilitar también el usuario asociado
+          example: true
+          default: true
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        nombres:
+          type: string
+          example: "Juan Carlos"
+        apellidos:
+          type: string
+          example: "Pérez Rodríguez"
+        correo:
+          type: string
+          example: "juancarlos@ejemplo.com"
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+        fechaCreacion:
+          type: string
+          format: date-time
+          example: "2023-05-15T14:30:00Z"
+        ftPerfil:
+          type: string
+          example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQE..."
+        tipoUsuario:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 2
+            nombre:
+              type: string
+              example: "Administrador"
+        permisos:
+          type: object
+          properties:
+            crear:
+              type: boolean
+              example: true
+            editar:
+              type: boolean
+              example: true
+            eliminar:
+              type: boolean
+              example: true
+        role:
+          type: string
+          example: "administrador"
+        datosPersonales:
+          type: object
+          properties:
+            idPersona:
+              type: integer
+              example: 1
+            cedula:
+              type: string
+              example: "40212345678"
+            fechaNacimiento:
+              type: string
+              format: date
+              example: "1990-01-15"
+            estadoCivil:
+              type: string
+              example: "soltero"
+            sexo:
+              type: string
+              enum: [M, F]
+              example: "M"
+            telefono:
+              type: string
+              example: "8091234567"
+            tipoPersona:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                nombre:
+                  type: string
+                  example: "Ciudadano"
+            ubicacion:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                direccion:
+                  type: string
+                  example: "Calle Principal #123"
+                sector:
+                  type: string
+                  example: "Centro de la Ciudad"
+                municipio:
+                  type: string
+                  example: "Santo Domingo Este"
+                provincia:
+                  type: string
+                  example: "Santo Domingo"
+
 
 
 paths:
@@ -2046,48 +2324,43 @@ paths:
   # Añadir a tu archivo swagger.yml
 
   /profilePicture:
-    put:
+    post:
       tags:
         - Usuarios
-      summary: Actualizar foto de perfil
-      description: Permite al usuario actualizar su foto de perfil
+      summary: Subir archivo a Supabase
+      description: Sube un archivo (foto de perfil o documento) a Supabase Storage y actualiza la base de datos. Si se sube un documento y no se proporciona ID de solicitud, se crea una nueva solicitud automáticamente.
       security:
         - BearerAuth: []
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
-              properties:
-                ftPerfil:
-                  type: string
-                  description: Imagen en formato base64
-                  example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQE..."
               required:
-                - ftPerfil
+                - file
+                - fileType
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Archivo a subir (imagen o documento)
+                fileType:
+                  type: string
+                  enum: [perfil, cedula, licencia, seguro, factura]
+                  description: Tipo de archivo que se está subiendo
+                solicitudId:
+                  type: integer
+                  description: ID de la solicitud (opcional, solo para documentos). Si no se proporciona, se crea una nueva solicitud.
       responses:
-        '200':
-          description: Foto de perfil actualizada exitosamente
+        '201':
+          description: Archivo subido exitosamente
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Foto de perfil actualizada exitosamente"
-                  data:
-                    type: object
-                    properties:
-                      ftPerfil:
-                        type: string
-                        example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQE..."
+                $ref: '#/components/schemas/FileUploadResponse'
         '400':
-          description: Datos inválidos
+          description: Error en los datos de entrada
           content:
             application/json:
               schema:
@@ -3147,8 +3420,8 @@ paths:
     delete:
       tags:
         - Personas
-      summary: Delete persona
-      description: Desactiva una persona y el usuario asociado si existe (marcando ambos como 'deshabilitado'). Previene la eliminación si está asociada a otro registro activo.
+      summary: Deshabilitar perfil personal
+      description: Deshabilita un perfil personal y opcionalmente su usuario asociado (solo para administradores)
       security:
         - BearerAuth: []
       requestBody:
@@ -3159,35 +3432,48 @@ paths:
               $ref: '#/components/schemas/PersonaDeleteRequest'
       responses:
         '200':
-          description: Persona deleted successfully
+          description: Perfil personal deshabilitado exitosamente
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GenericResponse'
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Perfil personal y usuario asociado deshabilitados exitosamente"
         '400':
-          description: Cannot delete persona associated with an active user
+          description: Datos inválidos
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/Error'
         '401':
-          description: Unauthorized
+          description: No autorizado
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/Error'
         '403':
-          description: Forbidden - Admin only operation
+          description: Acceso prohibido
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/Error'
         '404':
-          description: Persona not found
+          description: Perfil no encontrado
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /persona/empleados:
     get:

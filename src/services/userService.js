@@ -1,5 +1,6 @@
 const { pool } = require('../db');
 const bcrypt = require('bcryptjs');
+const personaService = require('./personaService');
 
 const getUsers = async (filters = {}) => {
   try {
@@ -196,23 +197,51 @@ const authenticateUser = async (email, password) => {
 };
 
 const createUser = async (userData) => {
-  const { nombres, apellidos, correo, contrasena, idTipoUsuario } = userData;
+  const { nombres, apellidos, correo, contrasena, idTipoUsuario, datosPersonales } = userData;
   
   try {
-    // Hashear la contraseña
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(contrasena, salt);
+    // Start a transaction to ensure both operations succeed or fail together
+    await pool.query('BEGIN');
     
-    // Insertar nuevo usuario
-    const result = await pool.query(
-      `INSERT INTO Usuario 
-       (nombres, apellidos, correo, contrasena, estado, idTipoUsuario) 
-       VALUES ($1, $2, $3, $4, 'activo', $5) 
-       RETURNING idUsuario, nombres, apellidos, correo`,
-      [nombres, apellidos, correo, hashedPassword, idTipoUsuario]
-    );
-    
-    return result.rows[0];
+    try {
+      // Hashear la contraseña
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(contrasena, salt);
+      
+      // Insertar nuevo usuario
+      const userResult = await pool.query(
+        `INSERT INTO Usuario 
+         (nombres, apellidos, correo, contrasena, estado, idTipoUsuario) 
+         VALUES ($1, $2, $3, $4, 'activo', $5) 
+         RETURNING idUsuario, nombres, apellidos, correo`,
+        [nombres, apellidos, correo, hashedPassword, idTipoUsuario]
+      );
+      
+      const newUser = userResult.rows[0];
+      
+      // Si se proporcionaron datos personales, crear persona asociada al usuario
+      if (datosPersonales) {
+        // Preparar datos de persona usando información del usuario
+        const personaData = {
+          ...datosPersonales,
+          nombres,
+          apellidos,
+          idUsuario: newUser.idusuario
+        };
+        
+        // Crear persona asociada al usuario
+        await personaService.createPersona(personaData);
+      }
+      
+      // Commit the transaction if everything succeeded
+      await pool.query('COMMIT');
+      
+      return newUser;
+    } catch (error) {
+      // If there's any error, roll back the transaction
+      await pool.query('ROLLBACK');
+      throw error;
+    }
   } catch (error) {
     console.error('Error al crear usuario:', error);
     throw error;
@@ -221,69 +250,122 @@ const createUser = async (userData) => {
 
 const updateUser = async (userId, userData) => {
   try {
-    const { nombres, apellidos, correo, estado, idTipoUsuario, contrasena } = userData;
+    // Start a transaction to ensure both operations succeed or fail together
+    await pool.query('BEGIN');
     
-    // Construir la consulta dinámicamente
-    let query = 'UPDATE Usuario SET ';
-    const queryParams = [];
-    const updateFields = [];
-    let paramCounter = 1;
-    
-    if (nombres) {
-      updateFields.push(`nombres = $${paramCounter}`);
-      queryParams.push(nombres);
-      paramCounter++;
+    try {
+      const { nombres, apellidos, correo, estado, idTipoUsuario, contrasena, datosPersonales } = userData;
+      
+      // Construir la consulta dinámicamente
+      let query = 'UPDATE Usuario SET ';
+      const queryParams = [];
+      const updateFields = [];
+      let paramCounter = 1;
+      
+      if (nombres) {
+        updateFields.push(`nombres = $${paramCounter}`);
+        queryParams.push(nombres);
+        paramCounter++;
+      }
+      
+      if (apellidos) {
+        updateFields.push(`apellidos = $${paramCounter}`);
+        queryParams.push(apellidos);
+        paramCounter++;
+      }
+      
+      if (correo) {
+        updateFields.push(`correo = $${paramCounter}`);
+        queryParams.push(correo);
+        paramCounter++;
+      }
+      
+      if (estado) {
+        updateFields.push(`estado = $${paramCounter}`);
+        queryParams.push(estado);
+        paramCounter++;
+      }
+      
+      if (idTipoUsuario) {
+        updateFields.push(`idTipoUsuario = $${paramCounter}`);
+        queryParams.push(idTipoUsuario);
+        paramCounter++;
+      }
+      
+      // Si se proporciona una nueva contraseña, hashearla
+      if (contrasena) {
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(contrasena, salt);
+        updateFields.push(`contrasena = $${paramCounter}`);
+        queryParams.push(hashedPassword);
+        paramCounter++;
+      }
+      
+      // Si no hay campos para actualizar, retornar null
+      if (updateFields.length === 0) {
+        await pool.query('ROLLBACK');
+        return null;
+      }
+      
+      query += updateFields.join(', ');
+      query += ` WHERE idUsuario = $${paramCounter} RETURNING idUsuario, nombres, apellidos, correo, estado, idTipoUsuario`;
+      queryParams.push(userId);
+      
+      const result = await pool.query(query, queryParams);
+      
+      if (result.rows.length === 0) {
+        await pool.query('ROLLBACK');
+        return null;
+      }
+      
+      const updatedUser = result.rows[0];
+      
+      // Si se proporcionaron datos personales, actualizar o crear persona asociada al usuario
+      if (datosPersonales) {
+        // Buscar si existe una persona asociada a este usuario
+        const personaResult = await pool.query(
+          'SELECT idPersona FROM Persona WHERE idUsuario = $1 AND estado != $2',
+          [userId, 'deshabilitado']
+        );
+        
+        if (personaResult.rows.length > 0) {
+          // Si existe, actualizar datos personales
+          const personaId = personaResult.rows[0].idpersona;
+          
+          // Preparar datos de persona manteniendo la consistencia con datos de usuario
+          const personaData = {
+            ...datosPersonales
+          };
+          
+          // Si se actualizó el nombre o apellido del usuario, actualizarlo también en persona
+          if (nombres) personaData.nombres = nombres;
+          if (apellidos) personaData.apellidos = apellidos;
+          
+          // Actualizar persona
+          await personaService.updatePersona(personaId, personaData);
+        } else if (nombres && apellidos) {
+          // Si no existe y tenemos los datos básicos, crear persona
+          const personaData = {
+            ...datosPersonales,
+            nombres,
+            apellidos,
+            idUsuario: userId
+          };
+          
+          // Crear persona asociada al usuario
+          await personaService.createPersona(personaData);
+        }
+      }
+      
+      // Commit the transaction if everything succeeded
+      await pool.query('COMMIT');
+      
+      return updatedUser;
+    } catch (error) {
+      // If there's any error, roll back the transaction
+      await pool.query('ROLLBACK');
+      throw error;
     }
-    
-    if (apellidos) {
-      updateFields.push(`apellidos = $${paramCounter}`);
-      queryParams.push(apellidos);
-      paramCounter++;
-    }
-    
-    if (correo) {
-      updateFields.push(`correo = $${paramCounter}`);
-      queryParams.push(correo);
-      paramCounter++;
-    }
-    
-    if (estado) {
-      updateFields.push(`estado = $${paramCounter}`);
-      queryParams.push(estado);
-      paramCounter++;
-    }
-    
-    if (idTipoUsuario) {
-      updateFields.push(`idTipoUsuario = $${paramCounter}`);
-      queryParams.push(idTipoUsuario);
-      paramCounter++;
-    }
-    
-    // Si se proporciona una nueva contraseña, hashearla
-    if (contrasena) {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash(contrasena, salt);
-      updateFields.push(`contrasena = $${paramCounter}`);
-      queryParams.push(hashedPassword);
-      paramCounter++;
-    }
-    
-    // Si no hay campos para actualizar, retornar null
-    if (updateFields.length === 0) {
-      return null;
-    }
-    
-    query += updateFields.join(', ');
-    query += ` WHERE idUsuario = $${paramCounter} RETURNING idUsuario, nombres, apellidos, correo, estado, idTipoUsuario`;
-    queryParams.push(userId);
-    
-    const result = await pool.query(query, queryParams);
-    
-    if (result.rows.length === 0) {
-      return null;
-    }
-    
-    return result.rows[0];
   } catch (error) {
     console.error('Error al actualizar usuario:', error);
     throw error;
@@ -451,9 +533,6 @@ const getAdminAndEmployeeUsers = async (filters = {}) => {
       query += ` AND u.estado = $${paramCounter}`;
       queryParams.push(filters.estado);
       paramCounter++;
-    } else {
-      // Por defecto solo mostrar usuarios activos
-      query += ` AND u.estado = 'activo'`;
     }
     
     // Aplicar filtros de nombre y apellido si existen

@@ -32,7 +32,41 @@ const userCreationSchema = Joi.object({
     .messages({
       'number.base': 'El tipo de usuario debe ser un número',
       'number.min': 'El tipo de usuario debe ser un valor válido'
-    })
+    }),
+  datosPersonales: Joi.object({
+    cedula: Joi.string().pattern(/^[0-9]{11}$/).required()
+      .messages({
+        'string.empty': 'La cédula es obligatoria',
+        'string.pattern.base': 'La cédula debe tener 11 dígitos numéricos'
+      }),
+    fechaNacimiento: Joi.date().iso().required()
+      .messages({
+        'date.base': 'La fecha de nacimiento debe ser una fecha válida',
+        'date.iso': 'La fecha de nacimiento debe tener formato YYYY-MM-DD'
+      }),
+    estadoCivil: Joi.string().valid('soltero', 'casado', 'divorciado', 'viudo').required()
+      .messages({
+        'any.only': 'El estado civil debe ser: soltero, casado, divorciado o viudo'
+      }),
+    sexo: Joi.string().valid('M', 'F').required()
+      .messages({
+        'any.only': 'El sexo debe ser M o F'
+      }),
+    telefono: Joi.string().pattern(/^[0-9]{10}$/).required()
+      .messages({
+        'string.pattern.base': 'El teléfono debe tener 10 dígitos numéricos'
+      }),
+    idUbicacion: Joi.number().integer().min(1)
+      .messages({
+        'number.base': 'La ubicación debe ser un número',
+        'number.min': 'La ubicación debe ser un valor válido'
+      }),
+    idTipoPersona: Joi.number().integer().min(1)
+      .messages({
+        'number.base': 'El tipo de persona debe ser un número',
+        'number.min': 'El tipo de persona debe ser un valor válido'
+      })
+  }).optional()
 });
 
 /**

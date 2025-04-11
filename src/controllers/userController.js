@@ -29,7 +29,76 @@ const getUsers = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const newUser = await userService.createUser(req.body);
+    // Extraer datos básicos del usuario y datos personales si existen
+    const { 
+      nombres, 
+      apellidos, 
+      correo, 
+      contrasena, 
+      idTipoUsuario,
+      // Datos personales (opcional)
+      cedula,
+      fechaNacimiento,
+      estadoCivil,
+      sexo,
+      telefono,
+      idUbicacion,
+      idTipoPersona
+    } = req.body;
+
+    // Verificar si se proporcionaron datos personales
+    const datosPersonales = {};
+    let hasPersonalData = false;
+
+    if (cedula) {
+      datosPersonales.cedula = cedula;
+      hasPersonalData = true;
+    }
+    
+    if (fechaNacimiento) {
+      datosPersonales.fechaNacimiento = fechaNacimiento;
+      hasPersonalData = true;
+    }
+    
+    if (estadoCivil) {
+      datosPersonales.estadoCivil = estadoCivil;
+      hasPersonalData = true;
+    }
+    
+    if (sexo) {
+      datosPersonales.sexo = sexo;
+      hasPersonalData = true;
+    }
+    
+    if (telefono) {
+      datosPersonales.telefono = telefono;
+      hasPersonalData = true;
+    }
+    
+    if (idUbicacion) {
+      datosPersonales.idUbicacion = idUbicacion;
+      hasPersonalData = true;
+    }
+    
+    if (idTipoPersona) {
+      datosPersonales.idTipoPersona = idTipoPersona;
+      hasPersonalData = true;
+    }
+
+    const userData = {
+      nombres,
+      apellidos,
+      correo,
+      contrasena,
+      idTipoUsuario
+    };
+
+    // Agregar datos personales si existen
+    if (hasPersonalData) {
+      userData.datosPersonales = datosPersonales;
+    }
+    
+    const newUser = await userService.createUser(userData);
     
     res.status(201).json({
       success: true,
@@ -53,7 +122,93 @@ const updateUser = async (req, res) => {
       });
     }
     
-    const updatedUser = await userService.updateUser(userId, req.body);
+    // Extraer datos básicos del usuario y datos personales si existen
+    const { 
+      nombres, 
+      apellidos, 
+      correo, 
+      contrasena, 
+      estado,
+      idTipoUsuario,
+      // Datos personales (opcional)
+      cedula,
+      fechaNacimiento,
+      estadoCivil,
+      sexo,
+      telefono,
+      idUbicacion,
+      idTipoPersona,
+      idPersona
+    } = req.body;
+
+    // Verificar si se proporcionaron datos personales
+    const datosPersonales = {};
+    let hasPersonalData = false;
+
+    if (cedula) {
+      datosPersonales.cedula = cedula;
+      hasPersonalData = true;
+    }
+    
+    if (fechaNacimiento) {
+      datosPersonales.fechaNacimiento = fechaNacimiento;
+      hasPersonalData = true;
+    }
+    
+    if (estadoCivil) {
+      datosPersonales.estadoCivil = estadoCivil;
+      hasPersonalData = true;
+    }
+    
+    if (sexo) {
+      datosPersonales.sexo = sexo;
+      hasPersonalData = true;
+    }
+    
+    if (telefono) {
+      datosPersonales.telefono = telefono;
+      hasPersonalData = true;
+    }
+    
+    if (idUbicacion) {
+      datosPersonales.idUbicacion = idUbicacion;
+      hasPersonalData = true;
+    }
+    
+    if (idTipoPersona) {
+      datosPersonales.idTipoPersona = idTipoPersona;
+      hasPersonalData = true;
+    }
+    
+    // Si se proporcionó un ID de persona, incluirlo
+    if (idPersona) {
+      datosPersonales.idPersona = idPersona;
+      hasPersonalData = true;
+    }
+
+    const userData = {
+      nombres,
+      apellidos,
+      correo,
+      contrasena,
+      estado,
+      idTipoUsuario
+    };
+
+    // Agregar datos personales si existen
+    if (hasPersonalData) {
+      userData.datosPersonales = datosPersonales;
+    }
+    
+    const updatedUser = await userService.updateUser(userId, userData);
+    
+    if (!updatedUser) {
+      return res.status(400).json({
+        success: false,
+        error: 'Datos incompletos',
+        message: 'No se proporcionaron datos para actualizar o el usuario no existe'
+      });
+    }
     
     res.status(200).json({
       success: true,
