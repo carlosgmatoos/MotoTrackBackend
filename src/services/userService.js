@@ -93,7 +93,7 @@ const getUsers = async (filters = {}) => {
       if (filters.includePersonaData) {
         const personaResult = await pool.query(
           `SELECT p.*, tp.nombre as tipo_persona_nombre,
-           u.direccion, m.nombreMunicipio, pr.nombreProvincia
+           u.direccion, m.nombreMunicipio, m.idMunicipio, pr.nombreProvincia, pr.idProvincia
            FROM Persona p
            LEFT JOIN TipoPersona tp ON p.idTipoPersona = tp.idTipoPersona
            LEFT JOIN Ubicacion u ON p.idUbicacion = u.idUbicacion
@@ -120,8 +120,14 @@ const getUsers = async (filters = {}) => {
             ubicacion: persona.direccion ? {
               id: persona.idubicacion,
               direccion: persona.direccion,
-              municipio: persona.nombremunicipio,
-              provincia: persona.nombreprovincia
+              municipio: {
+                id: persona.idmunicipio,
+                nombre: persona.nombremunicipio
+              },
+              provincia: {
+                id: persona.idprovincia,
+                nombre: persona.nombreprovincia
+              }
             } : null
           };
         }
@@ -685,7 +691,7 @@ const getAdminAndEmployeeUsers = async (filters = {}) => {
       // Get person data associated with the user
       let personaQuery = `
         SELECT p.*, tp.nombre as tipo_persona_nombre,
-        u.direccion, m.nombreMunicipio, pr.nombreProvincia
+        u.direccion, m.nombreMunicipio, m.idMunicipio, pr.nombreProvincia, pr.idProvincia
         FROM Persona p
         LEFT JOIN TipoPersona tp ON p.idTipoPersona = tp.idTipoPersona
         LEFT JOIN Ubicacion u ON p.idUbicacion = u.idUbicacion
@@ -734,8 +740,14 @@ const getAdminAndEmployeeUsers = async (filters = {}) => {
           ubicacion: persona.direccion ? {
             id: persona.idubicacion,
             direccion: persona.direccion,
-            municipio: persona.nombremunicipio,
-            provincia: persona.nombreprovincia
+            municipio: {
+              id: persona.idmunicipio,
+              nombre: persona.nombremunicipio
+            },
+            provincia: {
+              id: persona.idprovincia,
+              nombre: persona.nombreprovincia
+            }
           } : null
         };
       }
