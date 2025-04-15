@@ -64,7 +64,6 @@ CREATE TABLE Municipio (
 CREATE TABLE Ubicacion (
     idUbicacion SERIAL PRIMARY KEY,
     direccion TEXT NOT NULL,
-    sector VARCHAR(100),
     estado VARCHAR(15) CHECK (estado IN ('activo', 'inactivo', 'deshabilitado')),
     fechaCreacion DATE DEFAULT CURRENT_DATE,
     idMunicipio INT REFERENCES Municipio(idMunicipio)
@@ -96,8 +95,8 @@ CREATE TABLE Persona (
     idPersona SERIAL PRIMARY KEY,
     nombres VARCHAR(50) NOT NULL,
     apellidos VARCHAR(50) NOT NULL,
-    cedula VARCHAR(13) UNIQUE NOT NULL,
-    fechaNacimiento DATE NOT NULL,
+    cedula VARCHAR(13) UNIQUE,
+    fechaNacimiento DATE,
     estadoCivil VARCHAR(25),
     sexo VARCHAR(1) CHECK (sexo IN ('M', 'F')),
     telefono VARCHAR(15),

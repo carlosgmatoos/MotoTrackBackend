@@ -150,15 +150,6 @@ const validateUbicacionData = (data) => {
     errors.push('La dirección no puede exceder los 200 caracteres');
   }
   
-  // Validar sector (opcional)
-  if (data.sector !== undefined && data.sector !== null) {
-    if (typeof data.sector !== 'string') {
-      errors.push('El sector debe ser texto');
-    } else if (data.sector.length > 100) {
-      errors.push('El sector no puede exceder los 100 caracteres');
-    }
-  }
-  
   // Validar ID de municipio
   if (!data.idMunicipio) {
     errors.push('El ID del municipio es obligatorio');
@@ -214,6 +205,13 @@ const validatePersona = (persona) => {
     errors.push("El tipo de persona debe ser un ID numérico válido");
   }
   
+  // Validar campo cargo si está presente
+  if (persona.cargo !== undefined) {
+    if (typeof persona.cargo !== 'string' || persona.cargo.trim().length < 2) {
+      errors.push("El cargo debe ser un texto de al menos 2 caracteres");
+    }
+  }
+  
   return {
     isValid: errors.length === 0,
     errors
@@ -262,6 +260,13 @@ const validatePersonaUpdate = (personaData) => {
   if (personaData.idTipoPersona !== undefined) {
     if (isNaN(Number(personaData.idTipoPersona))) {
       errors.push("El tipo de persona debe ser un ID numérico válido");
+    }
+  }
+  
+  // Validar campo cargo si está presente
+  if (personaData.cargo !== undefined) {
+    if (typeof personaData.cargo !== 'string' || personaData.cargo.trim().length < 2) {
+      errors.push("El cargo debe ser un texto de al menos 2 caracteres");
     }
   }
   
@@ -571,6 +576,205 @@ const validateVehiculoData = (data) => {
   };
 };
 
+/**
+ * Valida y extrae datos personales de un usuario desde ambas fuentes (root y objeto anidado)
+ * @param {Object} userData - Datos del usuario que pueden contener datos personales en raíz o anidados
+ * @returns {Object} Objeto con datos personales combinados y valores booleanos indicando validez
+ */
+const extractAndValidatePersonalData = (userData) => {
+  // Extraer datos del objeto principal
+  const {
+    cedula, 
+    fechaNacimiento, 
+    estadoCivil, 
+    sexo, 
+    telefono,
+    direccion,
+    idMunicipio,
+    municipio,
+    idProvincia,
+    provincia,
+    idUbicacion,
+    idTipoPersona,
+    idPersona,
+    cargo,
+    datosPersonales: datosPersonalesObj
+  } = userData;
+
+  // Recopilar datos personales del objeto principal
+  const datosDirectos = {
+    cedula,
+    fechaNacimiento,
+    estadoCivil,
+    sexo,
+    telefono,
+    direccion,
+    idMunicipio,
+    municipio,
+    idProvincia,
+    provincia,
+    idUbicacion,
+    idTipoPersona,
+    idPersona,
+    cargo
+  };
+  
+  // Filtrar solo los campos con valores definidos
+  const datosDirectosFiltrados = Object.fromEntries(
+    Object.entries(datosDirectos).filter(([_, v]) => v !== undefined)
+  );
+  
+  // Combinar datos, priorizando los del objeto raíz sobre los del objeto anidado
+  const datosPersonalesCombinados = {
+    ...(datosPersonalesObj || {}),
+    ...datosDirectosFiltrados
+  };
+
+  // Validar campos básicos de usuario
+  const errors = [];
+  
+  // Validar datos comunes para creación y actualización
+  if (userData.correo && !validateEmail(userData.correo)) {
+    errors.push('El formato del correo electrónico no es válido');
+  }
+  
+  if (userData.contrasena && !validatePassword(userData.contrasena)) {
+    errors.push('La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número');
+  }
+
+  // Validar campos de datos personales
+  if (datosPersonalesCombinados.cedula && !/^[0-9]{11}$/.test(datosPersonalesCombinados.cedula)) {
+    errors.push('La cédula debe tener 11 dígitos numéricos');
+  }
+  
+  if (datosPersonalesCombinados.telefono && !/^[0-9]{10}$/.test(datosPersonalesCombinados.telefono)) {
+    errors.push('El teléfono debe tener 10 dígitos numéricos');
+  }
+  
+  if (datosPersonalesCombinados.estadoCivil && 
+      !['soltero', 'casado', 'divorciado', 'viudo'].includes(datosPersonalesCombinados.estadoCivil)) {
+    errors.push('El estado civil debe ser: soltero, casado, divorciado o viudo');
+  }
+  
+  if (datosPersonalesCombinados.sexo && !['M', 'F'].includes(datosPersonalesCombinados.sexo)) {
+    errors.push('El sexo debe ser M o F');
+  }
+  
+  if (datosPersonalesCombinados.fechaNacimiento) {
+    const fecha = new Date(datosPersonalesCombinados.fechaNacimiento);
+    if (isNaN(fecha.getTime())) {
+      errors.push('La fecha de nacimiento debe tener formato YYYY-MM-DD');
+    }
+  }
+  
+  return {
+    datosPersonalesCombinados,
+    hasPersonalData: Object.keys(datosPersonalesCombinados).length > 0,
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+/**
+ * Valida datos para la creación de un usuario
+ * @param {Object} userData - Datos del usuario a crear
+ * @param {boolean} isEmployee - Si el usuario es un empleado (requiere validación adicional)
+ * @returns {Object} Resultado de la validación
+ */
+const validateUserCreationData = (userData, isEmployee = false) => {
+  const errors = [];
+  
+  // Validar campos obligatorios generales
+  if (!userData.nombres) errors.push('El nombre es obligatorio');
+  if (!userData.apellidos) errors.push('Los apellidos son obligatorios');
+  if (!userData.correo) errors.push('El correo es obligatorio');
+  if (!userData.contrasena) errors.push('La contraseña es obligatoria');
+  
+  // Validar correo y contraseña
+  if (userData.correo && !validateEmail(userData.correo)) {
+    errors.push('El formato del correo electrónico no es válido');
+  }
+  
+  if (userData.contrasena && !validatePassword(userData.contrasena)) {
+    errors.push('La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número');
+  }
+  
+  // Extraer y validar datos personales
+  const { datosPersonalesCombinados, errors: personalDataErrors } = extractAndValidatePersonalData(userData);
+  
+  // Añadir errores de validación de datos personales
+  errors.push(...personalDataErrors);
+  
+  // Validaciones adicionales para empleados
+  if (isEmployee) {
+    const { cedula, sexo, estadoCivil, telefono, fechaNacimiento, direccion, idTipoPersona, cargo } = datosPersonalesCombinados;
+    const hasMunicipioInfo = datosPersonalesCombinados.idMunicipio || datosPersonalesCombinados.municipio;
+    const hasTipoPersonaInfo = idTipoPersona || userData.idTipoPersona || cargo || userData.cargo;
+    
+    if (!cedula) errors.push('La cédula es obligatoria para empleados');
+    if (!sexo) errors.push('El sexo es obligatorio para empleados');
+    if (!estadoCivil) errors.push('El estado civil es obligatorio para empleados');
+    if (!telefono) errors.push('El teléfono es obligatorio para empleados');
+    if (!fechaNacimiento) errors.push('La fecha de nacimiento es obligatoria para empleados');
+    if (!direccion) errors.push('La dirección es obligatoria para empleados');
+    if (!hasMunicipioInfo) errors.push('El municipio es obligatorio para empleados');
+    if (!hasTipoPersonaInfo) errors.push('El tipo de persona (cargo) es obligatorio para empleados');
+  }
+  
+  return {
+    datosPersonalesCombinados,
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+/**
+ * Valida datos para la actualización de un usuario
+ * @param {Object} userData - Datos del usuario a actualizar
+ * @param {boolean} isEmployee - Si el usuario es un empleado
+ * @returns {Object} Resultado de la validación
+ */
+const validateUserUpdateData = (userData, isEmployee = false) => {
+  const errors = [];
+  
+  // Verificar que el ID del usuario esté presente
+  if (!userData.idUsuario && !userData.id) {
+    errors.push('El ID del usuario es obligatorio');
+  }
+  
+  // Extraer y validar datos personales
+  const { datosPersonalesCombinados, errors: personalDataErrors } = extractAndValidatePersonalData(userData);
+  
+  // Añadir errores de validación de datos personales
+  errors.push(...personalDataErrors);
+  
+  // Verificar que haya al menos un campo para actualizar
+  const hasUserData = userData.nombres || userData.apellidos || userData.correo || 
+                      userData.contrasena || userData.estado || userData.idTipoUsuario;
+  
+  if (!hasUserData && Object.keys(datosPersonalesCombinados).length === 0) {
+    errors.push('No se proporcionaron datos para actualizar');
+  }
+  
+  // Validaciones adicionales si se trata de un empleado
+  if (isEmployee) {
+    // Si se están actualizando datos personales pero no incluye tipo de persona
+    const isTryingToUpdatePersonalData = Object.keys(datosPersonalesCombinados).length > 0;
+    const hasTipoPersonaInfo = datosPersonalesCombinados.idTipoPersona || userData.idTipoPersona || 
+                               datosPersonalesCombinados.cargo || userData.cargo;
+    
+    if (isTryingToUpdatePersonalData && !hasTipoPersonaInfo) {
+      errors.push('El tipo de persona (cargo) es obligatorio al actualizar datos de empleados');
+    }
+  }
+  
+  return {
+    datosPersonalesCombinados,
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
 module.exports = {
   validateEmail,
   validatePassword,
@@ -588,5 +792,9 @@ module.exports = {
   validateModeloData,
   validateTipoVehiculoData,
   validateSeguroData,
-  validateVehiculoData
+  validateVehiculoData,
+  // Nuevas funciones
+  extractAndValidatePersonalData,
+  validateUserCreationData,
+  validateUserUpdateData
 }; 

@@ -120,7 +120,6 @@ const getUsers = async (filters = {}) => {
             ubicacion: persona.direccion ? {
               id: persona.idubicacion,
               direccion: persona.direccion,
-              sector: persona.sector,
               municipio: persona.nombremunicipio,
               provincia: persona.nombreprovincia
             } : null
@@ -219,19 +218,29 @@ const createUser = async (userData) => {
       
       const newUser = userResult.rows[0];
       
-      // Si se proporcionaron datos personales, crear persona asociada al usuario
-      if (datosPersonales) {
-        // Preparar datos de persona usando información del usuario
-        const personaData = {
-          ...datosPersonales,
-          nombres,
-          apellidos,
-          idUsuario: newUser.idusuario
-        };
+      // Siempre crear una persona asociada al usuario
+      // Utilizar los datos proporcionados o los mínimos necesarios del usuario
+      const personaData = {
+        nombres,
+        apellidos,
+        idUsuario: newUser.idusuario,
+        ...(datosPersonales || {}) // Fusionar con datos personales adicionales si existen
+      };
+      
+      // Si no hay un tipo de persona definido, asignar uno predeterminado (Ciudadano)
+      if (!personaData.idTipoPersona) {
+        const defaultTipoPersonaResult = await pool.query(
+          'SELECT idTipoPersona FROM TipoPersona WHERE nombre = $1',
+          ['Ciudadano']
+        );
         
-        // Crear persona asociada al usuario
-        await personaService.createPersona(personaData);
+        if (defaultTipoPersonaResult.rows.length > 0) {
+          personaData.idTipoPersona = defaultTipoPersonaResult.rows[0].idtipopersona;
+        }
       }
+      
+      // Crear persona asociada al usuario
+      await personaService.createPersona(personaData);
       
       // Commit the transaction if everything succeeded
       await pool.query('COMMIT');
@@ -320,40 +329,66 @@ const updateUser = async (userId, userData) => {
       
       const updatedUser = result.rows[0];
       
-      // Si se proporcionaron datos personales, actualizar o crear persona asociada al usuario
-      if (datosPersonales) {
-        // Buscar si existe una persona asociada a este usuario
-        const personaResult = await pool.query(
-          'SELECT idPersona FROM Persona WHERE idUsuario = $1 AND estado != $2',
-          [userId, 'deshabilitado']
-        );
+      // Buscar si existe una persona asociada a este usuario
+      const personaResult = await pool.query(
+        'SELECT idPersona FROM Persona WHERE idUsuario = $1 AND estado != $2',
+        [userId, 'deshabilitado']
+      );
+      
+      // Preparar los datos básicos para persona que siempre deben mantenerse sincronizados con el usuario
+      const personaBasicData = {};
+      if (nombres) personaBasicData.nombres = nombres;
+      if (apellidos) personaBasicData.apellidos = apellidos;
+      
+      // Combinar con datos personales adicionales si existen
+      const personaData = {
+        ...personaBasicData,
+        ...(datosPersonales || {})
+      };
+      
+      if (personaResult.rows.length > 0) {
+        // Si existe, actualizar la persona
+        const personaId = personaResult.rows[0].idpersona;
         
-        if (personaResult.rows.length > 0) {
-          // Si existe, actualizar datos personales
-          const personaId = personaResult.rows[0].idpersona;
-          
-          // Preparar datos de persona manteniendo la consistencia con datos de usuario
-          const personaData = {
-            ...datosPersonales
-          };
-          
-          // Si se actualizó el nombre o apellido del usuario, actualizarlo también en persona
-          if (nombres) personaData.nombres = nombres;
-          if (apellidos) personaData.apellidos = apellidos;
-          
-          // Actualizar persona
+        // Solo actualizar si hay datos para actualizar
+        if (Object.keys(personaData).length > 0) {
           await personaService.updatePersona(personaId, personaData);
-        } else if (nombres && apellidos) {
-          // Si no existe y tenemos los datos básicos, crear persona
-          const personaData = {
-            ...datosPersonales,
-            nombres,
-            apellidos,
-            idUsuario: userId
-          };
+        }
+      } else if (Object.keys(personaData).length > 0) {
+        // Si no existe persona para este usuario, crearla
+        const newPersonaData = {
+          ...personaData,
+          idUsuario: userId
+        };
+        
+        // Si no hay nombres o apellidos en los datos de actualización, obtenerlos del usuario actualizado
+        if (!newPersonaData.nombres || !newPersonaData.apellidos) {
+          const userInfo = await pool.query(
+            'SELECT nombres, apellidos FROM Usuario WHERE idUsuario = $1',
+            [userId]
+          );
           
-          // Crear persona asociada al usuario
-          await personaService.createPersona(personaData);
+          if (userInfo.rows.length > 0) {
+            if (!newPersonaData.nombres) newPersonaData.nombres = userInfo.rows[0].nombres;
+            if (!newPersonaData.apellidos) newPersonaData.apellidos = userInfo.rows[0].apellidos;
+          }
+        }
+        
+        // Si no hay un tipo de persona definido, asignar uno predeterminado (Ciudadano)
+        if (!newPersonaData.idTipoPersona) {
+          const defaultTipoPersonaResult = await pool.query(
+            'SELECT idTipoPersona FROM TipoPersona WHERE nombre = $1',
+            ['Ciudadano']
+          );
+          
+          if (defaultTipoPersonaResult.rows.length > 0) {
+            newPersonaData.idTipoPersona = defaultTipoPersonaResult.rows[0].idtipopersona;
+          }
+        }
+        
+        // Solo crear si tenemos los datos mínimos requeridos
+        if (newPersonaData.nombres && newPersonaData.apellidos) {
+          await personaService.createPersona(newPersonaData);
         }
       }
       
@@ -428,54 +463,132 @@ const getUserById = async (userId) => {
 
 const updateUserProfile = async (userId, profileData) => {
   try {
-    const { nombres, apellidos, correo, ftPerfil } = profileData;
+    await pool.query('BEGIN');
     
-    // Construir la consulta dinámicamente
-    let query = 'UPDATE Usuario SET ';
-    const queryParams = [];
-    const updateFields = [];
-    let paramCounter = 1;
-    
-    if (nombres) {
-      updateFields.push(`nombres = $${paramCounter}`);
-      queryParams.push(nombres);
-      paramCounter++;
+    try {
+      const { nombres, apellidos, correo, ftPerfil, datosPersonales } = profileData;
+      
+      // Construir la consulta dinámicamente
+      let query = 'UPDATE Usuario SET ';
+      const queryParams = [];
+      const updateFields = [];
+      let paramCounter = 1;
+      
+      if (nombres) {
+        updateFields.push(`nombres = $${paramCounter}`);
+        queryParams.push(nombres);
+        paramCounter++;
+      }
+      
+      if (apellidos) {
+        updateFields.push(`apellidos = $${paramCounter}`);
+        queryParams.push(apellidos);
+        paramCounter++;
+      }
+      
+      if (correo) {
+        updateFields.push(`correo = $${paramCounter}`);
+        queryParams.push(correo);
+        paramCounter++;
+      }
+      
+      if (ftPerfil) {
+        updateFields.push(`ftPerfil = $${paramCounter}`);
+        queryParams.push(ftPerfil);
+        paramCounter++;
+      }
+      
+      // Si no hay campos para actualizar, retornar null
+      if (updateFields.length === 0 && !datosPersonales) {
+        await pool.query('ROLLBACK');
+        return null;
+      }
+      
+      let updatedUser = null;
+      
+      // Si hay campos de usuario para actualizar
+      if (updateFields.length > 0) {
+        query += updateFields.join(', ');
+        query += ` WHERE idUsuario = $${paramCounter} RETURNING idUsuario, nombres, apellidos, correo, ftPerfil`;
+        queryParams.push(userId);
+        
+        const result = await pool.query(query, queryParams);
+        
+        if (result.rows.length === 0) {
+          await pool.query('ROLLBACK');
+          return null;
+        }
+        
+        updatedUser = result.rows[0];
+      } else {
+        // Si no hay campos de usuario pero sí de persona, obtener los datos del usuario
+        const result = await pool.query(
+          'SELECT idUsuario, nombres, apellidos, correo, ftPerfil FROM Usuario WHERE idUsuario = $1',
+          [userId]
+        );
+        
+        if (result.rows.length === 0) {
+          await pool.query('ROLLBACK');
+          return null;
+        }
+        
+        updatedUser = result.rows[0];
+      }
+      
+      // Actualizar también la persona asociada si existe
+      const personaResult = await pool.query(
+        'SELECT idPersona FROM Persona WHERE idUsuario = $1 AND estado != $2',
+        [userId, 'deshabilitado']
+      );
+      
+      if (personaResult.rows.length > 0) {
+        const personaId = personaResult.rows[0].idpersona;
+        const personaData = {};
+        
+        // Actualizar nombre y apellido en persona para mantener sincronización
+        if (nombres) personaData.nombres = nombres;
+        if (apellidos) personaData.apellidos = apellidos;
+        
+        // Incorporar datos personales adicionales si se proporcionaron
+        if (datosPersonales) {
+          Object.assign(personaData, datosPersonales);
+        }
+        
+        // Solo actualizar si hay datos para actualizar
+        if (Object.keys(personaData).length > 0) {
+          await personaService.updatePersona(personaId, personaData);
+        }
+      } else if ((nombres || apellidos) || datosPersonales) {
+        // Si no existe una persona pero se proporcionaron datos personales, crearla
+        const personaData = {
+          idUsuario: userId,
+          nombres: nombres || updatedUser.nombres,
+          apellidos: apellidos || updatedUser.apellidos,
+          ...(datosPersonales || {})
+        };
+        
+        // Si no hay un tipo de persona definido, asignar uno predeterminado (Ciudadano)
+        if (!personaData.idTipoPersona) {
+          const defaultTipoPersonaResult = await pool.query(
+            'SELECT idTipoPersona FROM TipoPersona WHERE nombre = $1',
+            ['Ciudadano']
+          );
+          
+          if (defaultTipoPersonaResult.rows.length > 0) {
+            personaData.idTipoPersona = defaultTipoPersonaResult.rows[0].idtipopersona;
+          }
+        }
+        
+        // Crear persona asociada al usuario
+        await personaService.createPersona(personaData);
+      }
+      
+      await pool.query('COMMIT');
+      return updatedUser;
+    } catch (error) {
+      await pool.query('ROLLBACK');
+      throw error;
     }
-    
-    if (apellidos) {
-      updateFields.push(`apellidos = $${paramCounter}`);
-      queryParams.push(apellidos);
-      paramCounter++;
-    }
-    
-    if (correo) {
-      updateFields.push(`correo = $${paramCounter}`);
-      queryParams.push(correo);
-      paramCounter++;
-    }
-    
-    if (ftPerfil) {
-      updateFields.push(`ftPerfil = $${paramCounter}`);
-      queryParams.push(ftPerfil);
-      paramCounter++;
-    }
-    
-    // Si no hay campos para actualizar, retornar null
-    if (updateFields.length === 0) {
-      return null;
-    }
-    
-    query += updateFields.join(', ');
-    query += ` WHERE idUsuario = $${paramCounter} RETURNING idUsuario, nombres, apellidos, correo, ftPerfil`;
-    queryParams.push(userId);
-    
-    const result = await pool.query(query, queryParams);
-    
-    if (result.rows.length === 0) {
-      return null;
-    }
-    
-    return result.rows[0];
   } catch (error) {
     console.error('Error al actualizar perfil de usuario:', error);
     throw error;
@@ -572,7 +685,7 @@ const getAdminAndEmployeeUsers = async (filters = {}) => {
       // Get person data associated with the user
       let personaQuery = `
         SELECT p.*, tp.nombre as tipo_persona_nombre,
-        u.direccion, u.sector, m.nombreMunicipio, pr.nombreProvincia
+        u.direccion, m.nombreMunicipio, pr.nombreProvincia
         FROM Persona p
         LEFT JOIN TipoPersona tp ON p.idTipoPersona = tp.idTipoPersona
         LEFT JOIN Ubicacion u ON p.idUbicacion = u.idUbicacion
@@ -621,7 +734,6 @@ const getAdminAndEmployeeUsers = async (filters = {}) => {
           ubicacion: persona.direccion ? {
             id: persona.idubicacion,
             direccion: persona.direccion,
-            sector: persona.sector,
             municipio: persona.nombremunicipio,
             provincia: persona.nombreprovincia
           } : null

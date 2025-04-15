@@ -1,6 +1,6 @@
 const userService = require('../services/userService');
 const { handleError } = require('../utils/errorHandler');
-const { validateEmail, validatePassword } = require('../utils/validators');
+const { validateEmail, validatePassword, validateUserCreationData, validateUserUpdateData } = require('../utils/validators');
 
 const getUsers = async (req, res) => {
   try {
@@ -29,80 +29,146 @@ const getUsers = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    // Extraer datos básicos del usuario y datos personales si existen
+    // Verificar si el usuario es administrador (para crear empleados)
+    const isAdmin = req.user && req.user.tipoUsuario && req.user.tipoUsuario.nombre === 'Administrador';
+    const isCreatingEmployee = req.body.idTipoUsuario === 2; // Asumiendo que 2 es el ID para Empleado
+    
+    // Solo administradores pueden crear empleados
+    if (isCreatingEmployee && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Acceso denegado',
+        message: 'Solo los administradores pueden crear empleados'
+      });
+    }
+    
+    // Validar datos de usuario usando el validador mejorado
+    const { isValid, errors, datosPersonalesCombinados } = validateUserCreationData(req.body, isCreatingEmployee);
+    
+    if (!isValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Datos inválidos',
+        message: errors.join(', ')
+      });
+    }
+    
+    // Extraer datos básicos del usuario
     const { 
       nombres, 
       apellidos, 
       correo, 
       contrasena, 
       idTipoUsuario,
-      // Datos personales (opcional)
-      cedula,
-      fechaNacimiento,
-      estadoCivil,
-      sexo,
-      telefono,
-      idUbicacion,
-      idTipoPersona
+      estado = 'activo'
     } = req.body;
-
-    // Verificar si se proporcionaron datos personales
-    const datosPersonales = {};
-    let hasPersonalData = false;
-
-    if (cedula) {
-      datosPersonales.cedula = cedula;
-      hasPersonalData = true;
-    }
     
-    if (fechaNacimiento) {
-      datosPersonales.fechaNacimiento = fechaNacimiento;
-      hasPersonalData = true;
-    }
-    
-    if (estadoCivil) {
-      datosPersonales.estadoCivil = estadoCivil;
-      hasPersonalData = true;
-    }
-    
-    if (sexo) {
-      datosPersonales.sexo = sexo;
-      hasPersonalData = true;
-    }
-    
-    if (telefono) {
-      datosPersonales.telefono = telefono;
-      hasPersonalData = true;
-    }
-    
-    if (idUbicacion) {
-      datosPersonales.idUbicacion = idUbicacion;
-      hasPersonalData = true;
-    }
-    
-    if (idTipoPersona) {
-      datosPersonales.idTipoPersona = idTipoPersona;
-      hasPersonalData = true;
-    }
-
+    // Preparar los datos del usuario
     const userData = {
       nombres,
       apellidos,
       correo,
       contrasena,
-      idTipoUsuario
+      idTipoUsuario,
+      estado
     };
-
-    // Agregar datos personales si existen
-    if (hasPersonalData) {
-      userData.datosPersonales = datosPersonales;
+    
+    // Procesar datos de ubicación si se proporcionaron
+    try {
+      const { direccion, idMunicipio, municipio, idProvincia, provincia } = datosPersonalesCombinados;
+      
+      if (direccion && (idMunicipio || municipio || idProvincia || provincia)) {
+        // Determinar el municipio
+        let municipioId = idMunicipio;
+        
+        // Si se proporciona nombre de municipio, buscar su ID
+        if (!municipioId && municipio) {
+          const municipioService = require('../services/municipioService');
+          const municipios = await municipioService.getAllMunicipios({
+            nombreMunicipio: municipio,
+            idProvincia
+          });
+          
+          if (municipios && municipios.length > 0) {
+            municipioId = municipios[0].id;
+          }
+        }
+        
+        // Si se proporciona provincia pero no municipio, obtener un municipio de esa provincia
+        if (!municipioId && idProvincia) {
+          const municipioService = require('../services/municipioService');
+          const municipios = await municipioService.getAllMunicipios({
+            idProvincia,
+            limit: 1
+          });
+          
+          if (municipios && municipios.length > 0) {
+            municipioId = municipios[0].id;
+          }
+        }
+        
+        // Si tenemos dirección y municipio, crear ubicación
+        if (direccion && municipioId) {
+          const ubicacionService = require('../services/ubicacionService');
+          const newUbicacion = await ubicacionService.createUbicacion({
+            direccion,
+            idMunicipio: municipioId
+          });
+          
+          if (newUbicacion) {
+            datosPersonalesCombinados.idUbicacion = newUbicacion.id;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error al procesar ubicación:', error);
     }
     
+    // Asignar el tipo de persona según el tipo de usuario si no se proporcionó
+    if (!datosPersonalesCombinados.idTipoPersona && !req.body.cargo) {
+      try {
+        const tipoPersonaService = require('../services/tipoPersonaService');
+        let tipoPersonaNombre = 'Ciudadano';
+        
+        if (idTipoUsuario === 2) { // Empleado
+          tipoPersonaNombre = 'Oficial';
+        } else if (idTipoUsuario === 1) { // Administrador
+          tipoPersonaNombre = 'Director';
+        }
+        
+        const tipoPersona = await tipoPersonaService.getTipoPersonaByNombre(tipoPersonaNombre);
+        if (tipoPersona) {
+          datosPersonalesCombinados.idTipoPersona = tipoPersona.idtipopersona;
+        }
+      } catch (error) {
+        console.error('Error al obtener tipo de persona:', error);
+      }
+    }
+    // Si se proporcionó un cargo pero no un ID de tipo persona, buscar el tipo por nombre
+    else if (req.body.cargo && !datosPersonalesCombinados.idTipoPersona) {
+      try {
+        const tipoPersonaService = require('../services/tipoPersonaService');
+        const tipoPersona = await tipoPersonaService.getTipoPersonaByNombre(req.body.cargo);
+        
+        if (tipoPersona) {
+          datosPersonalesCombinados.idTipoPersona = tipoPersona.idtipopersona;
+        }
+      } catch (error) {
+        console.error('Error al obtener tipo de persona por cargo:', error);
+      }
+    }
+    
+    // Añadir datos personales al usuario
+    if (Object.keys(datosPersonalesCombinados).length > 0) {
+      userData.datosPersonales = datosPersonalesCombinados;
+    }
+    
+    // Crear el usuario (y la persona asociada)
     const newUser = await userService.createUser(userData);
     
     res.status(201).json({
       success: true,
-      message: 'Usuario creado exitosamente',
+      message: isCreatingEmployee ? 'Empleado creado exitosamente' : 'Usuario creado exitosamente',
       data: newUser
     });
   } catch (error) {
@@ -122,82 +188,118 @@ const updateUser = async (req, res) => {
       });
     }
     
-    // Extraer datos básicos del usuario y datos personales si existen
+    // Verificar si el usuario es empleado para aplicar validaciones adicionales
+    let isUpdatingEmployee = false;
+    if (req.body.idTipoUsuario === 2) {
+      isUpdatingEmployee = true;
+    } else {
+      try {
+        // Obtener el usuario actual para verificar su tipo
+        const currentUser = await userService.getUserById(userId);
+        isUpdatingEmployee = currentUser && currentUser.tipoUsuario && currentUser.tipoUsuario.id === 2;
+      } catch (error) {
+        console.error('Error al verificar tipo de usuario:', error);
+      }
+    }
+    
+    // Validar datos usando el validador mejorado
+    const { isValid, errors, datosPersonalesCombinados } = validateUserUpdateData(req.body, isUpdatingEmployee);
+    
+    if (!isValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Datos inválidos',
+        message: errors.join(', ')
+      });
+    }
+    
+    // Extraer datos básicos del usuario
     const { 
       nombres, 
       apellidos, 
       correo, 
       contrasena, 
       estado,
-      idTipoUsuario,
-      // Datos personales (opcional)
-      cedula,
-      fechaNacimiento,
-      estadoCivil,
-      sexo,
-      telefono,
-      idUbicacion,
-      idTipoPersona,
-      idPersona
+      idTipoUsuario
     } = req.body;
 
-    // Verificar si se proporcionaron datos personales
-    const datosPersonales = {};
-    let hasPersonalData = false;
+    // Preparar los datos del usuario
+    const userData = {};
+    if (nombres) userData.nombres = nombres;
+    if (apellidos) userData.apellidos = apellidos;
+    if (correo) userData.correo = correo;
+    if (contrasena) userData.contrasena = contrasena;
+    if (estado) userData.estado = estado;
+    if (idTipoUsuario) userData.idTipoUsuario = idTipoUsuario;
+    
+    // Procesar ubicación si es necesario
+    try {
+      const { direccion, idMunicipio, municipio, idProvincia, provincia } = datosPersonalesCombinados;
+      
+      if (direccion && (idMunicipio || municipio || idProvincia || provincia)) {
+        // Determinar el municipio
+        let municipioId = idMunicipio;
+        
+        // Si se proporciona nombre de municipio, buscar su ID
+        if (!municipioId && municipio) {
+          const municipioService = require('../services/municipioService');
+          const municipios = await municipioService.getAllMunicipios({
+            nombreMunicipio: municipio,
+            idProvincia
+          });
+          
+          if (municipios && municipios.length > 0) {
+            municipioId = municipios[0].id;
+          }
+        }
+        
+        // Si se proporciona provincia pero no municipio, obtener un municipio de esa provincia
+        if (!municipioId && idProvincia) {
+          const municipioService = require('../services/municipioService');
+          const municipios = await municipioService.getAllMunicipios({
+            idProvincia,
+            limit: 1
+          });
+          
+          if (municipios && municipios.length > 0) {
+            municipioId = municipios[0].id;
+          }
+        }
+        
+        // Si tenemos dirección y municipio y no hay idUbicacion, crear ubicación
+        if (direccion && municipioId && !datosPersonalesCombinados.idUbicacion) {
+          const ubicacionService = require('../services/ubicacionService');
+          const newUbicacion = await ubicacionService.createUbicacion({
+            direccion,
+            idMunicipio: municipioId
+          });
+          
+          if (newUbicacion) {
+            datosPersonalesCombinados.idUbicacion = newUbicacion.id;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error al procesar ubicación:', error);
+    }
+    
+    // Si se proporcionó un cargo pero no un ID de tipo persona, buscar el tipo por nombre
+    if (req.body.cargo && !datosPersonalesCombinados.idTipoPersona) {
+      try {
+        const tipoPersonaService = require('../services/tipoPersonaService');
+        const tipoPersona = await tipoPersonaService.getTipoPersonaByNombre(req.body.cargo);
+        
+        if (tipoPersona) {
+          datosPersonalesCombinados.idTipoPersona = tipoPersona.idtipopersona;
+        }
+      } catch (error) {
+        console.error('Error al obtener tipo de persona por cargo:', error);
+      }
+    }
 
-    if (cedula) {
-      datosPersonales.cedula = cedula;
-      hasPersonalData = true;
-    }
-    
-    if (fechaNacimiento) {
-      datosPersonales.fechaNacimiento = fechaNacimiento;
-      hasPersonalData = true;
-    }
-    
-    if (estadoCivil) {
-      datosPersonales.estadoCivil = estadoCivil;
-      hasPersonalData = true;
-    }
-    
-    if (sexo) {
-      datosPersonales.sexo = sexo;
-      hasPersonalData = true;
-    }
-    
-    if (telefono) {
-      datosPersonales.telefono = telefono;
-      hasPersonalData = true;
-    }
-    
-    if (idUbicacion) {
-      datosPersonales.idUbicacion = idUbicacion;
-      hasPersonalData = true;
-    }
-    
-    if (idTipoPersona) {
-      datosPersonales.idTipoPersona = idTipoPersona;
-      hasPersonalData = true;
-    }
-    
-    // Si se proporcionó un ID de persona, incluirlo
-    if (idPersona) {
-      datosPersonales.idPersona = idPersona;
-      hasPersonalData = true;
-    }
-
-    const userData = {
-      nombres,
-      apellidos,
-      correo,
-      contrasena,
-      estado,
-      idTipoUsuario
-    };
-
-    // Agregar datos personales si existen
-    if (hasPersonalData) {
-      userData.datosPersonales = datosPersonales;
+    // Añadir datos personales al usuario
+    if (Object.keys(datosPersonalesCombinados).length > 0) {
+      userData.datosPersonales = datosPersonalesCombinados;
     }
     
     const updatedUser = await userService.updateUser(userId, userData);
@@ -206,7 +308,7 @@ const updateUser = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Datos incompletos',
-        message: 'No se proporcionaron datos para actualizar o el usuario no existe'
+        message: 'No se pudo actualizar el usuario o el usuario no existe'
       });
     }
     
@@ -256,6 +358,7 @@ const updateProfile = async (req, res) => {
     // El ID del usuario lo obtenemos del token
     const userId = req.user.id;
     
+    // Restricción para que solo se puedan actualizar estos campos específicos
     const { nombres, apellidos, correo, ftPerfil } = req.body;
     
     // Validar correo si se proporciona
@@ -276,18 +379,29 @@ const updateProfile = async (req, res) => {
       });
     }
     
-    const updatedProfile = await userService.updateUserProfile(userId, {
-      nombres,
-      apellidos,
-      correo,
-      ftPerfil
-    });
+    // Preparar los datos del usuario (limitado a estos campos específicos)
+    const userData = {};
+    if (nombres) userData.nombres = nombres;
+    if (apellidos) userData.apellidos = apellidos;
+    if (correo) userData.correo = correo;
+    if (ftPerfil) userData.ftPerfil = ftPerfil;
     
-    if (!updatedProfile) {
+    // Si no hay campos para actualizar, retornar error
+    if (Object.keys(userData).length === 0) {
       return res.status(400).json({
         success: false,
         error: 'Datos incompletos',
         message: 'No se proporcionaron datos para actualizar'
+      });
+    }
+    
+    const updatedProfile = await userService.updateUserProfile(userId, userData);
+    
+    if (!updatedProfile) {
+      return res.status(400).json({
+        success: false,
+        error: 'Error al actualizar',
+        message: 'No se pudo actualizar el perfil del usuario'
       });
     }
     

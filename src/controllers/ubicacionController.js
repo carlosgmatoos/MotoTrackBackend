@@ -3,13 +3,12 @@ const { handleError } = require('../utils/errorHandler');
 
 const getAllUbicaciones = async (req, res) => {
   try {
-    const { id, direccion, sector, estado, idMunicipio } = req.query;
+    const { id, direccion, estado, idMunicipio } = req.query;
     
     // Build filters object
     const filters = {};
     if (id) filters.idUbicacion = parseInt(id, 10);
     if (direccion) filters.direccion = direccion;
-    if (sector) filters.sector = sector;
     if (estado) filters.estado = estado;
     if (idMunicipio) filters.idMunicipio = parseInt(idMunicipio, 10);
     
@@ -44,7 +43,7 @@ const getAllUbicaciones = async (req, res) => {
 
 const createUbicacion = async (req, res) => {
   try {
-    const { direccion, sector, idMunicipio } = req.body;
+    const { direccion, idMunicipio } = req.body;
     
     // Validate data
     if (!direccion || !idMunicipio) {
@@ -57,7 +56,6 @@ const createUbicacion = async (req, res) => {
     
     const newUbicacion = await ubicacionService.createUbicacion({
       direccion,
-      sector,
       idMunicipio
     });
     
@@ -83,11 +81,10 @@ const updateUbicacion = async (req, res) => {
       });
     }
     
-    const { direccion, sector, estado, idMunicipio } = req.body;
+    const { direccion, estado, idMunicipio } = req.body;
     
     const updatedUbicacion = await ubicacionService.updateUbicacion(ubicacionId, {
       direccion,
-      sector,
       estado,
       idMunicipio
     });

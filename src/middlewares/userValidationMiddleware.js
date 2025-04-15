@@ -33,6 +33,40 @@ const userCreationSchema = Joi.object({
       'number.base': 'El tipo de usuario debe ser un número',
       'number.min': 'El tipo de usuario debe ser un valor válido'
     }),
+  cargo: Joi.string().min(2).max(50).optional()
+    .messages({
+      'string.min': 'El cargo debe tener al menos {#limit} caracteres',
+      'string.max': 'El cargo no puede exceder los {#limit} caracteres'
+    }),
+  estado: Joi.string().valid('activo', 'inactivo', 'deshabilitado').optional(),
+  cedula: Joi.string().pattern(/^[0-9]{11}$/).optional()
+    .messages({
+      'string.pattern.base': 'La cédula debe tener 11 dígitos numéricos'
+    }),
+  fechaNacimiento: Joi.date().iso().optional()
+    .messages({
+      'date.base': 'La fecha de nacimiento debe ser una fecha válida',
+      'date.iso': 'La fecha de nacimiento debe tener formato YYYY-MM-DD'
+    }),
+  estadoCivil: Joi.string().valid('soltero', 'casado', 'divorciado', 'viudo').optional()
+    .messages({
+      'any.only': 'El estado civil debe ser: soltero, casado, divorciado o viudo'
+    }),
+  sexo: Joi.string().valid('M', 'F').optional()
+    .messages({
+      'any.only': 'El sexo debe ser M o F'
+    }),
+  telefono: Joi.string().pattern(/^[0-9]{10}$/).optional()
+    .messages({
+      'string.pattern.base': 'El teléfono debe tener 10 dígitos numéricos'
+    }),
+  direccion: Joi.string().optional(),
+  idMunicipio: Joi.number().integer().min(1).optional(),
+  municipio: Joi.string().optional(),
+  idProvincia: Joi.number().integer().min(1).optional(),
+  provincia: Joi.string().optional(),
+  idUbicacion: Joi.number().integer().min(1).optional(),
+  idTipoPersona: Joi.number().integer().min(1).optional(),
   datosPersonales: Joi.object({
     cedula: Joi.string().pattern(/^[0-9]{11}$/).required()
       .messages({
@@ -73,6 +107,8 @@ const userCreationSchema = Joi.object({
  * Esquema de validación para actualización de usuarios
  */
 const userUpdateSchema = Joi.object({
+  id: Joi.number().integer().min(1),
+  idUsuario: Joi.number().integer().min(1),
   nombres: Joi.string().min(2).max(50)
     .messages({
       'string.min': 'El nombre debe tener al menos {#limit} caracteres',
@@ -91,15 +127,50 @@ const userUpdateSchema = Joi.object({
     .messages({
       'string.min': 'La contraseña debe tener al menos {#limit} caracteres'
     }),
-  estado: Joi.string().valid('activo', 'deshabilitado')
+  estado: Joi.string().valid('activo', 'inactivo', 'deshabilitado')
     .messages({
-      'any.only': 'El estado debe ser "activo" o "deshabilitado"'
+      'any.only': 'El estado debe ser "activo", "inactivo" o "deshabilitado"'
     }),
   idTipoUsuario: Joi.number().integer().min(1)
     .messages({
       'number.base': 'El tipo de usuario debe ser un número',
       'number.min': 'El tipo de usuario debe ser un valor válido'
-    })
+    }),
+  cargo: Joi.string().min(2).max(50)
+    .messages({
+      'string.min': 'El cargo debe tener al menos {#limit} caracteres',
+      'string.max': 'El cargo no puede exceder los {#limit} caracteres'
+    }),
+  cedula: Joi.string().pattern(/^[0-9]{11}$/).optional()
+    .messages({
+      'string.pattern.base': 'La cédula debe tener 11 dígitos numéricos'
+    }),
+  fechaNacimiento: Joi.date().iso().optional()
+    .messages({
+      'date.base': 'La fecha de nacimiento debe ser una fecha válida',
+      'date.iso': 'La fecha de nacimiento debe tener formato YYYY-MM-DD'
+    }),
+  estadoCivil: Joi.string().valid('soltero', 'casado', 'divorciado', 'viudo').optional()
+    .messages({
+      'any.only': 'El estado civil debe ser: soltero, casado, divorciado o viudo'
+    }),
+  sexo: Joi.string().valid('M', 'F').optional()
+    .messages({
+      'any.only': 'El sexo debe ser M o F'
+    }),
+  telefono: Joi.string().pattern(/^[0-9]{10}$/).optional()
+    .messages({
+      'string.pattern.base': 'El teléfono debe tener 10 dígitos numéricos'
+    }),
+  direccion: Joi.string().optional(),
+  idMunicipio: Joi.number().integer().min(1).optional(),
+  municipio: Joi.string().optional(),
+  idProvincia: Joi.number().integer().min(1).optional(),
+  provincia: Joi.string().optional(),
+  idUbicacion: Joi.number().integer().min(1).optional(),
+  idTipoPersona: Joi.number().integer().min(1).optional(),
+  idPersona: Joi.number().integer().min(1).optional(),
+  datosPersonales: Joi.object().optional()
 }).min(1).messages({
   'object.min': 'Debe proporcionar al menos un campo para actualizar'
 });
@@ -145,6 +216,39 @@ const validateUserCreation = (req, res, next) => {
     });
   }
   
+  // Verificar si hay datos personales en el objeto principal
+  const { 
+    cedula, fechaNacimiento, estadoCivil, sexo, telefono, direccion, 
+    idMunicipio, municipio, idProvincia, provincia, idUbicacion, idTipoPersona 
+  } = req.body;
+  
+  // Si hay datos personales en el objeto principal y no hay objeto datosPersonales,
+  // reorganizar para crear un objeto datosPersonales
+  const hasPersonalDataInRoot = cedula || fechaNacimiento || estadoCivil || sexo || 
+                               telefono || direccion || idMunicipio || municipio || 
+                               idProvincia || provincia || idUbicacion || idTipoPersona;
+  
+  if (hasPersonalDataInRoot && !req.body.datosPersonales) {
+    // Crear objeto datosPersonales para uso interno
+    const datosPersonales = {};
+    
+    if (cedula) datosPersonales.cedula = cedula;
+    if (fechaNacimiento) datosPersonales.fechaNacimiento = fechaNacimiento;
+    if (estadoCivil) datosPersonales.estadoCivil = estadoCivil;
+    if (sexo) datosPersonales.sexo = sexo;
+    if (telefono) datosPersonales.telefono = telefono;
+    if (direccion) datosPersonales.direccion = direccion;
+    if (idMunicipio) datosPersonales.idMunicipio = idMunicipio;
+    if (municipio) datosPersonales.municipio = municipio;
+    if (idProvincia) datosPersonales.idProvincia = idProvincia;
+    if (provincia) datosPersonales.provincia = provincia;
+    if (idUbicacion) datosPersonales.idUbicacion = idUbicacion;
+    if (idTipoPersona) datosPersonales.idTipoPersona = idTipoPersona;
+    
+    // No modificar el req.body original para evitar confusiones en los controladores
+    // que ya manejan estos campos directamente
+  }
+  
   next();
 };
 
@@ -161,6 +265,40 @@ const validateUserUpdate = (req, res, next) => {
       error: 'Datos inválidos',
       message: errorMessage
     });
+  }
+  
+  // Verificar si hay datos personales en el objeto principal
+  const { 
+    cedula, fechaNacimiento, estadoCivil, sexo, telefono, direccion, 
+    idMunicipio, municipio, idProvincia, provincia, idUbicacion, idTipoPersona, idPersona 
+  } = req.body;
+  
+  // Si hay datos personales en el objeto principal y no hay objeto datosPersonales,
+  // reorganizar para crear un objeto datosPersonales
+  const hasPersonalDataInRoot = cedula || fechaNacimiento || estadoCivil || sexo || 
+                               telefono || direccion || idMunicipio || municipio || 
+                               idProvincia || provincia || idUbicacion || idTipoPersona || idPersona;
+  
+  if (hasPersonalDataInRoot && !req.body.datosPersonales) {
+    // Crear objeto datosPersonales para uso interno
+    const datosPersonales = {};
+    
+    if (cedula) datosPersonales.cedula = cedula;
+    if (fechaNacimiento) datosPersonales.fechaNacimiento = fechaNacimiento;
+    if (estadoCivil) datosPersonales.estadoCivil = estadoCivil;
+    if (sexo) datosPersonales.sexo = sexo;
+    if (telefono) datosPersonales.telefono = telefono;
+    if (direccion) datosPersonales.direccion = direccion;
+    if (idMunicipio) datosPersonales.idMunicipio = idMunicipio;
+    if (municipio) datosPersonales.municipio = municipio;
+    if (idProvincia) datosPersonales.idProvincia = idProvincia;
+    if (provincia) datosPersonales.provincia = provincia;
+    if (idUbicacion) datosPersonales.idUbicacion = idUbicacion;
+    if (idTipoPersona) datosPersonales.idTipoPersona = idTipoPersona;
+    if (idPersona) datosPersonales.idPersona = idPersona;
+    
+    // No modificar el req.body original para evitar confusiones en los controladores
+    // que ya manejan estos campos directamente
   }
   
   next();

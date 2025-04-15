@@ -95,9 +95,9 @@ const createPersona = async (personaData) => {
   
   const query = `
     INSERT INTO Persona (
-      nombres, apellidos, cedula, fechaNacimiento, 
-      estadoCivil, sexo, telefono, estado, 
-      idUbicacion, idTipoPersona, idUsuario
+      nombres, apellidos, cedula, fechanacimiento, 
+      estadocivil, sexo, telefono, estado, 
+      idubicacion, idtipopersona, idusuario
     )
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     RETURNING *
@@ -122,130 +122,218 @@ const createPersona = async (personaData) => {
 };
 
 const updatePersona = async (id, personaData) => {
-  // Verificar que la persona existe
-  const checkQuery = `
-    SELECT * FROM Persona
-    WHERE idPersona = $1 AND estado != 'deshabilitado'
-  `;
-  
-  const checkResult = await pool.query(checkQuery, [id]);
-  
-  if (checkResult.rows.length === 0) {
-    throw new Error('Persona no encontrada');
-  }
-  
-  // Si se está actualizando la cédula, verificar que no exista otra persona con esa cédula
-  if (personaData.cedula) {
-    const cedulaCheckQuery = `
-      SELECT * FROM Persona
-      WHERE cedula = $1 AND idPersona != $2 AND estado != 'deshabilitado'
-    `;
+  try {
+    // Start a transaction
+    await pool.query('BEGIN');
     
-    const cedulaCheckResult = await pool.query(cedulaCheckQuery, [personaData.cedula, id]);
-    if (cedulaCheckResult.rows.length > 0) {
-      throw new Error('Ya existe otra persona registrada con esta cédula');
+    try {
+      // Verificar que la persona existe
+      const checkQuery = `
+        SELECT p.* 
+        FROM Persona p
+        WHERE p.idPersona = $1 AND p.estado != 'deshabilitado'
+      `;
+      
+      const checkResult = await pool.query(checkQuery, [id]);
+      
+      if (checkResult.rows.length === 0) {
+        throw new Error('Persona no encontrada');
+      }
+      
+      const personaExistente = checkResult.rows[0];
+      
+      // Si se está actualizando la cédula, verificar que no exista otra persona con esa cédula
+      if (personaData.cedula) {
+        const cedulaCheckQuery = `
+          SELECT * FROM Persona
+          WHERE cedula = $1 AND idPersona != $2 AND estado != 'deshabilitado'
+        `;
+        
+        const cedulaCheckResult = await pool.query(cedulaCheckQuery, [personaData.cedula, id]);
+        if (cedulaCheckResult.rows.length > 0) {
+          await pool.query('ROLLBACK');
+          throw new Error('Ya existe otra persona registrada con esta cédula');
+        }
+      }
+      
+      const {
+        nombres,
+        apellidos,
+        cedula,
+        fechaNacimiento,
+        estadoCivil,
+        sexo,
+        telefono,
+        idUbicacion,
+        idTipoPersona,
+        idUsuario,
+        estado,
+        // Datos de ubicación para crear/actualizar
+        direccion,
+        idMunicipio,
+        idProvincia
+      } = personaData;
+      
+      // Verificar si necesitamos crear o actualizar una ubicación
+      let ubicacionIdToUse = idUbicacion;
+      
+      if ((direccion || idMunicipio) && !idUbicacion) {
+        // Necesitamos crear o actualizar una ubicación
+        // Primero verificar si ya tiene una ubicación asociada que podemos actualizar
+        const currentUbicacionId = personaExistente.idubicacion;
+        
+        if (currentUbicacionId) {
+          // Actualizar la ubicación existente
+          const ubicacionUpdateData = {};
+          
+          if (direccion) ubicacionUpdateData.direccion = direccion;
+          if (idMunicipio) ubicacionUpdateData.idMunicipio = idMunicipio;
+          
+          // Si tenemos datos para actualizar, hacerlo
+          if (Object.keys(ubicacionUpdateData).length > 0) {
+            const ubicacionService = require('./ubicacionService');
+            const updatedUbicacion = await ubicacionService.updateUbicacion(
+              currentUbicacionId, 
+              ubicacionUpdateData
+            );
+            
+            if (updatedUbicacion) {
+              ubicacionIdToUse = updatedUbicacion.id;
+            }
+          } else {
+            ubicacionIdToUse = currentUbicacionId;
+          }
+        } else if (direccion && idMunicipio) {
+          // Crear una nueva ubicación
+          const ubicacionService = require('./ubicacionService');
+          const newUbicacion = await ubicacionService.createUbicacion({
+            direccion,
+            idMunicipio
+          });
+          
+          if (newUbicacion) {
+            ubicacionIdToUse = newUbicacion.id;
+          }
+        }
+      }
+      
+      // Actualizar los datos de la persona
+      let updateFields = [];
+      let queryParams = [];
+      let paramCount = 1;
+      
+      if (nombres) {
+        updateFields.push(`nombres = $${paramCount}`);
+        queryParams.push(nombres);
+        paramCount++;
+      }
+      
+      if (apellidos) {
+        updateFields.push(`apellidos = $${paramCount}`);
+        queryParams.push(apellidos);
+        paramCount++;
+      }
+      
+      if (cedula) {
+        updateFields.push(`cedula = $${paramCount}`);
+        queryParams.push(cedula);
+        paramCount++;
+      }
+      
+      if (fechaNacimiento) {
+        updateFields.push(`fechanacimiento = $${paramCount}`);
+        queryParams.push(fechaNacimiento);
+        paramCount++;
+      }
+      
+      if (estadoCivil) {
+        updateFields.push(`estadocivil = $${paramCount}`);
+        queryParams.push(estadoCivil);
+        paramCount++;
+      }
+      
+      if (sexo) {
+        updateFields.push(`sexo = $${paramCount}`);
+        queryParams.push(sexo);
+        paramCount++;
+      }
+      
+      if (telefono) {
+        updateFields.push(`telefono = $${paramCount}`);
+        queryParams.push(telefono);
+        paramCount++;
+      }
+      
+      if (ubicacionIdToUse) {
+        updateFields.push(`idubicacion = $${paramCount}`);
+        queryParams.push(ubicacionIdToUse);
+        paramCount++;
+      }
+      
+      if (idTipoPersona) {
+        updateFields.push(`idtipopersona = $${paramCount}`);
+        queryParams.push(idTipoPersona);
+        paramCount++;
+      }
+      
+      if (idUsuario) {
+        updateFields.push(`idusuario = $${paramCount}`);
+        queryParams.push(idUsuario);
+        paramCount++;
+      }
+      
+      if (estado) {
+        updateFields.push(`estado = $${paramCount}`);
+        queryParams.push(estado);
+        paramCount++;
+      }
+      
+      if (updateFields.length === 0) {
+        await pool.query('ROLLBACK');
+        throw new Error('No se proporcionaron campos para actualizar');
+      }
+      
+      queryParams.push(id);
+      
+      const query = `
+        UPDATE Persona
+        SET ${updateFields.join(', ')}
+        WHERE idPersona = $${paramCount}
+        RETURNING *
+      `;
+      
+      const result = await pool.query(query, queryParams);
+      const updatedPersona = result.rows[0];
+      
+      // Si la persona tiene un usuario asociado y se actualizó el nombre o apellido,
+      // actualizar también el usuario para mantener la sincronización
+      if (personaExistente.idusuario && (nombres || apellidos)) {
+        const userUpdateData = {};
+        
+        if (nombres) userUpdateData.nombres = nombres;
+        if (apellidos) userUpdateData.apellidos = apellidos;
+        
+        if (Object.keys(userUpdateData).length > 0) {
+          await pool.query(
+            `UPDATE Usuario 
+             SET nombres = COALESCE($1, nombres), 
+                 apellidos = COALESCE($2, apellidos)
+             WHERE idUsuario = $3`,
+            [userUpdateData.nombres, userUpdateData.apellidos, personaExistente.idusuario]
+          );
+        }
+      }
+      
+      await pool.query('COMMIT');
+      return updatedPersona;
+    } catch (error) {
+      await pool.query('ROLLBACK');
+      throw error;
     }
+  } catch (error) {
+    console.error('Error al actualizar persona:', error);
+    throw error;
   }
-  
-  const {
-    nombres,
-    apellidos,
-    cedula,
-    fechaNacimiento,
-    estadoCivil,
-    sexo,
-    telefono,
-    idUbicacion,
-    idTipoPersona,
-    idUsuario,
-    estado
-  } = personaData;
-  
-  let updateFields = [];
-  let queryParams = [];
-  let paramCount = 1;
-  
-  if (nombres) {
-    updateFields.push(`nombres = $${paramCount}`);
-    queryParams.push(nombres);
-    paramCount++;
-  }
-  
-  if (apellidos) {
-    updateFields.push(`apellidos = $${paramCount}`);
-    queryParams.push(apellidos);
-    paramCount++;
-  }
-  
-  if (cedula) {
-    updateFields.push(`cedula = $${paramCount}`);
-    queryParams.push(cedula);
-    paramCount++;
-  }
-  
-  if (fechaNacimiento) {
-    updateFields.push(`"fechaNacimiento" = $${paramCount}`);
-    queryParams.push(fechaNacimiento);
-    paramCount++;
-  }
-  
-  if (estadoCivil) {
-    updateFields.push(`"estadoCivil" = $${paramCount}`);
-    queryParams.push(estadoCivil);
-    paramCount++;
-  }
-  
-  if (sexo) {
-    updateFields.push(`sexo = $${paramCount}`);
-    queryParams.push(sexo);
-    paramCount++;
-  }
-  
-  if (telefono) {
-    updateFields.push(`telefono = $${paramCount}`);
-    queryParams.push(telefono);
-    paramCount++;
-  }
-  
-  if (idUbicacion) {
-    updateFields.push(`"idUbicacion" = $${paramCount}`);
-    queryParams.push(idUbicacion);
-    paramCount++;
-  }
-  
-  if (idTipoPersona) {
-    updateFields.push(`"idTipoPersona" = $${paramCount}`);
-    queryParams.push(idTipoPersona);
-    paramCount++;
-  }
-  
-  if (idUsuario) {
-    updateFields.push(`"idUsuario" = $${paramCount}`);
-    queryParams.push(idUsuario);
-    paramCount++;
-  }
-  
-  if (estado) {
-    updateFields.push(`estado = $${paramCount}`);
-    queryParams.push(estado);
-    paramCount++;
-  }
-  
-  if (updateFields.length === 0) {
-    throw new Error('No se proporcionaron campos para actualizar');
-  }
-  
-  queryParams.push(id);
-  
-  const query = `
-    UPDATE Persona
-    SET ${updateFields.join(', ')}
-    WHERE idPersona = $${paramCount}
-    RETURNING *
-  `;
-  
-  const result = await pool.query(query, queryParams);
-  return result.rows[0];
 };
 
 const deletePersona = async (id) => {

@@ -136,13 +136,26 @@ const createPersona = async (req, res) => {
 
 const updatePersona = async (req, res) => {
   try {
-    const personaId = req.body.idPersona || req.body.id;
+    let personaId = req.body.idPersona || req.body.id;
     
-    if (!personaId) {
+    // Si no se proporciona ID, usar el del usuario autenticado
+    if (!personaId && req.user) {
+      // Buscar la persona asociada con el usuario autenticado
+      const personaUsuario = await personaService.getPersonaByUsuarioId(req.user.id);
+      if (personaUsuario) {
+        personaId = personaUsuario.idpersona;
+      } else {
+        return res.status(404).json({
+          success: false,
+          error: 'Perfil no encontrado',
+          message: 'No tienes un perfil personal asociado a tu cuenta'
+        });
+      }
+    } else if (!personaId) {
       return res.status(400).json({
         success: false,
         error: 'Datos incompletos',
-        message: 'Se requiere el ID de la persona'
+        message: 'Se requiere el ID de la persona o estar autenticado'
       });
     }
     
@@ -157,18 +170,33 @@ const updatePersona = async (req, res) => {
       });
     }
     
-    // Verificar permisos: solo puede actualizar su propio perfil o ser admin/empleado
+    // Verificar permisos según el rol del usuario
     let isOwnProfile = false;
-    let isAdminOrEmployee = false;
+    let isAdmin = false;
     
     if (req.user) {
       isOwnProfile = persona.idusuario === req.user.id;
-      isAdminOrEmployee = 
-        req.user.tipoUsuario?.nombre === 'Administrador' || 
-        req.user.tipoUsuario?.nombre === 'Empleado';
+      isAdmin = req.user.tipoUsuario?.nombre === 'Administrador';
+    }
+    
+    // Un administrador puede actualizar perfiles de empleados
+    let canEditAsAdmin = false;
+    if (isAdmin && !isOwnProfile) {
+      // Verificar si la persona es un empleado
+      if (persona && persona.idtipopersona) {
+        const empleadoProfile = await personaService.getPersonaById(persona.idpersona);
+        const usuarioEmpleado = empleadoProfile.idusuario ? 
+          await userService.getUserById(empleadoProfile.idusuario) : null;
+        
+        if (usuarioEmpleado && usuarioEmpleado.tipoUsuario && 
+            usuarioEmpleado.tipoUsuario.nombre === 'Empleado') {
+          canEditAsAdmin = true;
+        }
+      }
     }
       
-    if (!isOwnProfile && !isAdminOrEmployee) {
+    // Solo permitir actualizar si es el propio perfil o si es admin actualizando a un empleado
+    if (!isOwnProfile && !canEditAsAdmin) {
       return res.status(403).json({
         success: false,
         error: 'Acceso denegado',
@@ -180,49 +208,126 @@ const updatePersona = async (req, res) => {
     const personaData = { ...req.body };
     delete personaData.idUsuario; // Evitar cambios en la relación usuario-persona
     
+    // Extraer datos específicos para actualización
+    const { 
+      nombres, 
+      apellidos, 
+      cedula,
+      fechaNacimiento,
+      estadoCivil,
+      sexo,
+      telefono,
+      // Datos de ubicación
+      direccion,
+      idMunicipio,
+      municipio,
+      idProvincia,
+      provincia
+    } = req.body;
+    
     // Verificar si hay que actualizar también el usuario asociado
-    const { actualizarUsuario, nombres, apellidos } = req.body;
-    
-    // Iniciar transacción: actualizar persona y usuario asociado si es necesario
-    let updatedPersona = null;
-    let updatedUser = null;
-    
-    if (persona.idusuario && actualizarUsuario === true && (nombres || apellidos)) {
-      // Crear objeto con datos de usuario a actualizar
+    if (persona.idusuario && (nombres || apellidos)) {
+      // Actualizar el usuario asociado con nombres y apellidos
       const userData = {};
-      
       if (nombres) userData.nombres = nombres;
       if (apellidos) userData.apellidos = apellidos;
       
-      // Actualizar el usuario asociado
-      updatedUser = await userService.updateUser(persona.idusuario, userData);
-      
-      if (!updatedUser) {
-        return res.status(404).json({
-          success: false,
-          error: 'Usuario no encontrado',
-          message: 'No se pudo actualizar el usuario asociado'
-        });
-      }
-      
-    } else {
-      // Si es un administrador o empleado, permitir actualizar nombres/apellidos en la persona
-      if (!isAdminOrEmployee) {
-        delete personaData.nombres;
-        delete personaData.apellidos;
+      if (Object.keys(userData).length > 0) {
+        const updatedUser = await userService.updateUser(persona.idusuario, userData);
+        
+        if (!updatedUser) {
+          return res.status(404).json({
+            success: false,
+            error: 'Usuario no encontrado',
+            message: 'No se pudo actualizar el usuario asociado'
+          });
+        }
       }
     }
     
+    // Manejar la actualización de ubicación (municipio y provincia)
+    let ubicacionId = personaData.idUbicacion;
+    
+    try {
+      // Si se proporciona información de ubicación, procesar la ubicación
+      if (direccion || idMunicipio || municipio || idProvincia || provincia) {
+        const ubicacionService = require('../services/ubicacionService');
+        const municipioService = require('../services/municipioService');
+        
+        // Determinar el municipio a usar
+        let municipioId = idMunicipio;
+        
+        // Si se proporciona nombre de municipio, buscar su ID
+        if (!municipioId && municipio) {
+          const municipios = await municipioService.getAllMunicipios({
+            nombreMunicipio: municipio,
+            idProvincia
+          });
+          
+          if (municipios && municipios.length > 0) {
+            municipioId = municipios[0].id;
+          }
+        }
+        
+        // Si se proporciona provincia pero no municipio, obtener un municipio de esa provincia
+        if (!municipioId && idProvincia) {
+          const municipios = await municipioService.getAllMunicipios({
+            idProvincia,
+            limit: 1
+          });
+          
+          if (municipios && municipios.length > 0) {
+            municipioId = municipios[0].id;
+          }
+        }
+        
+        // Si tenemos dirección y municipio, actualizar o crear ubicación
+        if (direccion && municipioId) {
+          // Si ya tiene ubicación, actualizarla
+          if (persona.idubicacion) {
+            const updatedUbicacion = await ubicacionService.updateUbicacion(
+              persona.idubicacion,
+              {
+                direccion,
+                idMunicipio: municipioId
+              }
+            );
+            
+            if (updatedUbicacion) {
+              ubicacionId = updatedUbicacion.id;
+            }
+          } else {
+            // Crear nueva ubicación
+            const newUbicacion = await ubicacionService.createUbicacion({
+              direccion,
+              idMunicipio: municipioId
+            });
+            
+            if (newUbicacion) {
+              ubicacionId = newUbicacion.id;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error al procesar ubicación:', error);
+    }
+    
+    // Actualizar la ubicación en los datos de la persona
+    if (ubicacionId) {
+      personaData.idUbicacion = ubicacionId;
+    }
+    
     // Actualizar persona
-    updatedPersona = await personaService.updatePersona(personaId, personaData);
+    const updatedPersona = await personaService.updatePersona(personaId, personaData);
+    
+    // Obtener los datos actualizados incluyendo la relación con ubicación
+    const personaActualizada = await personaService.getPersonaById(personaId);
     
     return res.status(200).json({
       success: true,
       message: 'Perfil personal actualizado exitosamente',
-      data: {
-        persona: updatedPersona,
-        usuario: updatedUser
-      }
+      data: personaActualizada
     });
   } catch (error) {
     return handleError(res, error);

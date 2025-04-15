@@ -28,12 +28,6 @@ const getAllUbicaciones = async (filters = {}) => {
       paramCounter++;
     }
     
-    if (filters.sector) {
-      query += ` AND u.sector ILIKE $${paramCounter}`;
-      queryParams.push(`%${filters.sector}%`);
-      paramCounter++;
-    }
-    
     if (filters.estado) {
       query += ` AND u.estado = $${paramCounter}`;
       queryParams.push(filters.estado);
@@ -54,7 +48,6 @@ const getAllUbicaciones = async (filters = {}) => {
     return result.rows.map(ubicacion => ({
       id: ubicacion.idubicacion,
       direccion: ubicacion.direccion,
-      sector: ubicacion.sector,
       estado: ubicacion.estado,
       fechaCreacion: ubicacion.fechacreacion,
       municipio: {
@@ -77,11 +70,11 @@ const getAllUbicaciones = async (filters = {}) => {
  */
 const createUbicacion = async (ubicacionData) => {
   try {
-    const { direccion, sector, idMunicipio } = ubicacionData;
+    const { direccion, idMunicipio } = ubicacionData;
     
     const result = await pool.query(
-      'INSERT INTO Ubicacion (direccion, sector, idMunicipio, estado) VALUES ($1, $2, $3, $4) RETURNING *',
-      [direccion, sector, idMunicipio, 'activo']
+      'INSERT INTO Ubicacion (direccion, idMunicipio, estado) VALUES ($1, $2, $3) RETURNING *',
+      [direccion, idMunicipio, 'activo']
     );
     
     const ubicacion = result.rows[0];
@@ -102,7 +95,6 @@ const createUbicacion = async (ubicacionData) => {
     return {
       id: ubicacion.idubicacion,
       direccion: ubicacion.direccion,
-      sector: ubicacion.sector,
       estado: ubicacion.estado,
       fechaCreacion: ubicacion.fechacreacion,
       municipio: {
@@ -125,17 +117,16 @@ const createUbicacion = async (ubicacionData) => {
  */
 const updateUbicacion = async (ubicacionId, ubicacionData) => {
   try {
-    const { direccion, sector, estado, idMunicipio } = ubicacionData;
+    const { direccion, estado, idMunicipio } = ubicacionData;
     
     const result = await pool.query(
       `UPDATE Ubicacion 
        SET direccion = COALESCE($1, direccion),
-           sector = COALESCE($2, sector),
-           estado = COALESCE($3, estado),
-           idMunicipio = COALESCE($4, idMunicipio)
-       WHERE idUbicacion = $5
+           estado = COALESCE($2, estado),
+           idMunicipio = COALESCE($3, idMunicipio)
+       WHERE idUbicacion = $4
        RETURNING *`,
-      [direccion, sector, estado, idMunicipio, ubicacionId]
+      [direccion, estado, idMunicipio, ubicacionId]
     );
     
     if (result.rows.length === 0) {
@@ -160,7 +151,6 @@ const updateUbicacion = async (ubicacionId, ubicacionData) => {
     return {
       id: ubicacion.idubicacion,
       direccion: ubicacion.direccion,
-      sector: ubicacion.sector,
       estado: ubicacion.estado,
       fechaCreacion: ubicacion.fechacreacion,
       municipio: {

@@ -160,50 +160,71 @@ components:
         idTipoUsuario:
           type: integer
           example: 2
-        datosPersonales:
-          type: object
-          description: Datos personales del usuario (opcional)
-          properties:
-            cedula:
-              type: string
-              example: "40212345678"
-              description: Cédula de identidad (11 dígitos)
-            fechaNacimiento:
-              type: string
-              format: date
-              example: "1990-01-15"
-              description: Fecha de nacimiento
-            estadoCivil:
-              type: string
-              enum: [soltero, casado, divorciado, viudo]
-              example: "soltero"
-              description: Estado civil
-            sexo:
-              type: string
-              enum: [M, F]
-              example: "M"
-              description: Sexo (M o F)
-            telefono:
-              type: string
-              example: "8091234567"
-              description: Número de teléfono (10 dígitos)
-            idUbicacion:
-              type: integer
-              example: 1
-              description: ID de la ubicación relacionada
-            idTipoPersona:
-              type: integer
-              example: 2
-              description: ID del tipo de persona
+          description: "Tipo de usuario (1: Administrador, 2: Empleado, 3: Ciudadano). Solo administradores pueden crear empleados."
+        estado:
+          type: string
+          enum: [activo, inactivo, deshabilitado]
+          example: "activo"
+          description: "Estado inicial del usuario"
+        # Datos personales (obligatorios para crear empleados)
+        cedula:
+          type: string
+          example: "40212345678"
+          description: "Cédula de identidad (11 dígitos). Obligatorio para crear empleados."
+        fechaNacimiento:
+          type: string
+          format: date
+          example: "1990-01-15"
+          description: "Fecha de nacimiento. Obligatorio para crear empleados."
+        estadoCivil:
+          type: string
+          enum: [soltero, casado, divorciado, viudo]
+          example: "soltero"
+          description: "Estado civil. Obligatorio para crear empleados."
+        sexo:
+          type: string
+          enum: [M, F]
+          example: "M"
+          description: "Sexo (M o F). Obligatorio para crear empleados."
+        telefono:
+          type: string
+          example: "8091234567"
+          description: "Número de teléfono (10 dígitos). Obligatorio para crear empleados."
+        cargo:
+          type: string
+          example: "Oficial"
+          description: "Cargo o tipo de persona. Obligatorio para crear empleados."
+        # Datos de ubicación (obligatorios para crear empleados)
+        direccion:
+          type: string
+          example: "Calle Principal #123"
+          description: "Dirección física. Obligatorio para crear empleados."
+        idMunicipio:
+          type: integer
+          example: 5
+          description: "ID del municipio. Obligatorio para crear empleados (a menos que se proporcione municipio y provincia)."
+        municipio:
+          type: string
+          example: "Santo Domingo Este"
+          description: "Nombre del municipio (alternativa a idMunicipio)."
+        idProvincia:
+          type: integer
+          example: 2
+          description: "ID de la provincia."
+        provincia:
+          type: string
+          example: "Santo Domingo"
+          description: "Nombre de la provincia."
 
     UserUpdateRequest:
       type: object
       required:
-        - idUsuario
+        - id
       properties:
-        idUsuario:
+        id:
           type: integer
           example: 1
+          description: ID del usuario a actualizar (también puede usarse como idUsuario)
         nombres:
           type: string
           example: "Juan Carlos"
@@ -217,20 +238,17 @@ components:
         contrasena:
           type: string
           format: password
-          example: "NuevaContraseña123"
+          example: "Contraseña123"
         estado:
           type: string
           enum: [activo, inactivo, deshabilitado]
         idTipoUsuario:
           type: integer
+          example: 2
         datosPersonales:
           type: object
-          description: Datos personales del usuario (opcional)
+          description: Datos personales del usuario (si el usuario ya tiene una persona asociada, se actualizará; de lo contrario, se creará una nueva persona automáticamente)
           properties:
-            idPersona:
-              type: integer
-              example: 5
-              description: ID de la persona si ya existe
             cedula:
               type: string
               example: "40212345678"
@@ -262,6 +280,18 @@ components:
               type: integer
               example: 2
               description: ID del tipo de persona
+            cargo:
+              type: string
+              example: "Oficial"
+              description: Cargo o tipo de persona (alternativa a idTipoPersona)
+            direccion:
+              type: string
+              description: Dirección física (se creará o actualizará la ubicación correspondiente)
+              example: "Calle Principal #123"
+            idMunicipio:
+              type: integer
+              description: ID del municipio
+              example: 5
 
     UserDeleteRequest:
       type: object
@@ -574,9 +604,6 @@ components:
         direccion:
           type: string
           example: "Calle Principal #123"
-        sector:
-          type: string
-          example: "Los Mina"
         estado:
           type: string
           enum: [activo, inactivo, deshabilitado]
@@ -613,9 +640,6 @@ components:
         direccion:
           type: string
           example: "Avenida Principal #456"
-        sector:
-          type: string
-          example: "Ensanche Ozama"
         idMunicipio:
           type: integer
           example: 1
@@ -631,9 +655,6 @@ components:
         direccion:
           type: string
           example: "Avenida Principal #456"
-        sector:
-          type: string
-          example: "Ensanche Ozama"
         estado:
           type: string
           enum: [activo, inactivo, deshabilitado]
@@ -886,37 +907,56 @@ components:
         nombres:
           type: string
           example: "Juan"
+          description: "Actualiza tanto los nombres de la persona como los del usuario asociado"
         apellidos:
           type: string
           example: "Pérez"
+          description: "Actualiza tanto los apellidos de la persona como los del usuario asociado"
         cedula:
           type: string
           example: "40212345678"
+          description: "Cédula de identidad (11 dígitos)"
         fechaNacimiento:
           type: string
           format: date
           example: "1990-01-15"
+          description: "Fecha de nacimiento"
         estadoCivil:
           type: string
           enum: [soltero, casado, divorciado, viudo]
           example: "soltero"
+          description: "Estado civil"
         sexo:
           type: string
           enum: [M, F]
           example: "M"
+          description: "Sexo (M o F)"
         telefono:
           type: string
           example: "8091234567"
-        idUbicacion:
+          description: "Número de teléfono (10 dígitos)"
+        # Campos de ubicación (ciudadanos pueden actualizar su propia ubicación, 
+        # administradores pueden actualizar la ubicación de empleados)
+        direccion:
+          type: string
+          description: "Dirección física"
+          example: "Calle Principal #123"
+        idMunicipio:
           type: integer
-          example: 1
-        idTipoPersona:
+          description: "ID del municipio"
+          example: 5
+        municipio:
+          type: string
+          description: "Nombre del municipio (alternativa a idMunicipio)"
+          example: "Santo Domingo Este"
+        idProvincia:
           type: integer
-          example: 1
-        actualizarUsuario:
-          type: boolean
-          description: Indica si se debe actualizar también el usuario asociado
-          example: true
+          description: "ID de la provincia"
+          example: 2
+        provincia:
+          type: string
+          description: "Nombre de la provincia (alternativa a idProvincia)"
+          example: "Santo Domingo"
 
     AuthResponse:
       type: object
@@ -1676,9 +1716,6 @@ components:
                       direccion:
                         type: string
                         example: "Calle Principal #123"
-                      sector:
-                        type: string
-                        example: "Centro de la Ciudad"
                       municipio:
                         type: string
                         example: "Santo Domingo Este"
@@ -1842,9 +1879,6 @@ components:
                 direccion:
                   type: string
                   example: "Calle Principal #123"
-                sector:
-                  type: string
-                  example: "Centro de la Ciudad"
                 municipio:
                   type: string
                   example: "Santo Domingo Este"
@@ -2182,7 +2216,7 @@ paths:
       tags:
         - Usuarios
       summary: Actualizar perfil de usuario
-      description: Permite al usuario actualizar su información de perfil
+      description: Permite al usuario actualizar la información básica de su perfil (nombres, apellidos, correo)
       security:
         - BearerAuth: []
       requestBody:
@@ -2223,7 +2257,7 @@ paths:
                   data:
                     type: object
                     properties:
-                      idUsuario:
+                      id:
                         type: integer
                         example: 1
                       nombres:
@@ -2238,6 +2272,56 @@ paths:
                       ftPerfil:
                         type: string
                         example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQE..."
+                      fechaCreacion:
+                        type: string
+                        format: date-time
+                        example: "2023-01-15T14:30:00Z"
+                      datosPersonales:
+                        type: object
+                        properties:
+                          idPersona:
+                            type: integer
+                            example: 5
+                          cedula:
+                            type: string
+                            example: "40212345678"
+                          fechaNacimiento:
+                            type: string
+                            format: date
+                            example: "1990-01-15"
+                          estadoCivil:
+                            type: string
+                            example: "soltero"
+                          sexo:
+                            type: string
+                            example: "M"
+                          telefono:
+                            type: string
+                            example: "8091234567"
+                          tipoPersona:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                                example: 1
+                              nombre:
+                                type: string
+                                example: "Ciudadano"
+                          ubicacion:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                                example: 3
+                              direccion:
+                                type: string
+                                example: "Calle Principal #123"
+                              municipio:
+                                type: string
+                                example: "Santo Domingo Este"
+                              provincia:
+                                type: string
+                                example: "Santo Domingo"
         '400':
           description: Datos inválidos
           content:
@@ -2475,9 +2559,6 @@ paths:
                               direccion:
                                 type: string
                                 example: "Calle Principal #123"
-                              sector:
-                                type: string
-                                example: "Centro de la Ciudad"
                               municipio:
                                 type: string
                                 example: "Santo Domingo Este"
@@ -3090,11 +3171,6 @@ paths:
           description: Filtrar por dirección
           schema:
             type: string
-        - name: sector
-          in: query
-          description: Filtrar por sector
-          schema:
-            type: string
         - name: estado
           in: query
           description: Filtrar por estado
@@ -3464,76 +3540,6 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Perfil no encontrado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Error del servidor
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /persona/empleados:
-    get:
-      tags:
-        - Personas
-      summary: Obtener listado de empleados
-      description: Obtiene un listado de personas con tipo 'Empleado' (solo para administradores)
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: nombres
-          in: query
-          description: Filtrar por nombres
-          schema:
-            type: string
-        - name: apellidos
-          in: query
-          description: Filtrar por apellidos
-          schema:
-            type: string
-        - name: cedula
-          in: query
-          description: Filtrar por cédula
-          schema:
-            type: string
-        - name: estado
-          in: query
-          description: Filtrar por estado
-          schema:
-            type: string
-            enum: [activo, inactivo, deshabilitado]
-      responses:
-        '200':
-          description: Listado de empleados obtenido exitosamente
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Persona'
-                  count:
-                    type: integer
-                    example: 5
-                  message:
-                    type: string
-                    example: "Lista de empleados obtenida con éxito"
-        '401':
-          description: No autorizado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Acceso prohibido
           content:
             application/json:
               schema:
