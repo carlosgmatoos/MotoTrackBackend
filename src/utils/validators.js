@@ -591,13 +591,10 @@ const extractAndValidatePersonalData = (userData) => {
     telefono,
     direccion,
     idMunicipio,
-    municipio,
     idProvincia,
-    provincia,
     idUbicacion,
     idTipoPersona,
     idPersona,
-    cargo,
     datosPersonales: datosPersonalesObj
   } = userData;
 
@@ -610,13 +607,10 @@ const extractAndValidatePersonalData = (userData) => {
     telefono,
     direccion,
     idMunicipio,
-    municipio,
     idProvincia,
-    provincia,
     idUbicacion,
     idTipoPersona,
-    idPersona,
-    cargo
+    idPersona
   };
   
   // Filtrar solo los campos con valores definidos
@@ -707,9 +701,7 @@ const validateUserCreationData = (userData, isEmployee = false) => {
   
   // Validaciones adicionales para empleados
   if (isEmployee) {
-    const { cedula, sexo, estadoCivil, telefono, fechaNacimiento, direccion, idTipoPersona, cargo } = datosPersonalesCombinados;
-    const hasMunicipioInfo = datosPersonalesCombinados.idMunicipio || datosPersonalesCombinados.municipio;
-    const hasTipoPersonaInfo = idTipoPersona || userData.idTipoPersona || cargo || userData.cargo;
+    const { cedula, sexo, estadoCivil, telefono, fechaNacimiento, direccion, idTipoPersona, idMunicipio } = datosPersonalesCombinados;
     
     if (!cedula) errors.push('La cédula es obligatoria para empleados');
     if (!sexo) errors.push('El sexo es obligatorio para empleados');
@@ -717,8 +709,8 @@ const validateUserCreationData = (userData, isEmployee = false) => {
     if (!telefono) errors.push('El teléfono es obligatorio para empleados');
     if (!fechaNacimiento) errors.push('La fecha de nacimiento es obligatoria para empleados');
     if (!direccion) errors.push('La dirección es obligatoria para empleados');
-    if (!hasMunicipioInfo) errors.push('El municipio es obligatorio para empleados');
-    if (!hasTipoPersonaInfo) errors.push('El tipo de persona (cargo) es obligatorio para empleados');
+    if (!idMunicipio) errors.push('El ID del municipio es obligatorio para empleados');
+    if (!idTipoPersona) errors.push('El ID del tipo de persona es obligatorio para empleados');
   }
   
   return {
@@ -760,11 +752,10 @@ const validateUserUpdateData = (userData, isEmployee = false) => {
   if (isEmployee) {
     // Si se están actualizando datos personales pero no incluye tipo de persona
     const isTryingToUpdatePersonalData = Object.keys(datosPersonalesCombinados).length > 0;
-    const hasTipoPersonaInfo = datosPersonalesCombinados.idTipoPersona || userData.idTipoPersona || 
-                               datosPersonalesCombinados.cargo || userData.cargo;
+    const hasTipoPersonaInfo = datosPersonalesCombinados.idTipoPersona || userData.idTipoPersona;
     
     if (isTryingToUpdatePersonalData && !hasTipoPersonaInfo) {
-      errors.push('El tipo de persona (cargo) es obligatorio al actualizar datos de empleados');
+      errors.push('El ID del tipo de persona es obligatorio al actualizar datos de empleados');
     }
   }
   

@@ -75,57 +75,31 @@ const createUser = async (req, res) => {
     
     // Procesar datos de ubicación si se proporcionaron
     try {
-      const { direccion, idMunicipio, municipio, idProvincia, provincia } = datosPersonalesCombinados;
+      const { direccion, idMunicipio } = datosPersonalesCombinados;
       
-      if (direccion && (idMunicipio || municipio || idProvincia || provincia)) {
-        // Determinar el municipio
-        let municipioId = idMunicipio;
+      // Si tenemos dirección y municipio, crear ubicación
+      if (direccion && idMunicipio) {
+        const ubicacionService = require('../services/ubicacionService');
+        const newUbicacion = await ubicacionService.createUbicacion({
+          direccion,
+          idMunicipio
+        });
         
-        // Si se proporciona nombre de municipio, buscar su ID
-        if (!municipioId && municipio) {
-          const municipioService = require('../services/municipioService');
-          const municipios = await municipioService.getAllMunicipios({
-            nombreMunicipio: municipio,
-            idProvincia
-          });
-          
-          if (municipios && municipios.length > 0) {
-            municipioId = municipios[0].id;
-          }
-        }
-        
-        // Si se proporciona provincia pero no municipio, obtener un municipio de esa provincia
-        if (!municipioId && idProvincia) {
-          const municipioService = require('../services/municipioService');
-          const municipios = await municipioService.getAllMunicipios({
-            idProvincia,
-            limit: 1
-          });
-          
-          if (municipios && municipios.length > 0) {
-            municipioId = municipios[0].id;
-          }
-        }
-        
-        // Si tenemos dirección y municipio, crear ubicación
-        if (direccion && municipioId) {
-          const ubicacionService = require('../services/ubicacionService');
-          const newUbicacion = await ubicacionService.createUbicacion({
-            direccion,
-            idMunicipio: municipioId
-          });
-          
-          if (newUbicacion) {
-            datosPersonalesCombinados.idUbicacion = newUbicacion.id;
-          }
+        if (newUbicacion) {
+          datosPersonalesCombinados.idUbicacion = newUbicacion.id;
         }
       }
     } catch (error) {
       console.error('Error al procesar ubicación:', error);
     }
     
-    // Asignar el tipo de persona según el tipo de usuario si no se proporcionó
-    if (!datosPersonalesCombinados.idTipoPersona && !req.body.cargo) {
+    // Usar idTipoPersona directamente si está en el body
+    if (!datosPersonalesCombinados.idTipoPersona && req.body.idTipoPersona) {
+      datosPersonalesCombinados.idTipoPersona = req.body.idTipoPersona;
+    }
+    
+    // Asignar tipo de persona por defecto según el tipo de usuario si no se proporcionó
+    if (!datosPersonalesCombinados.idTipoPersona) {
       try {
         const tipoPersonaService = require('../services/tipoPersonaService');
         let tipoPersonaNombre = 'Ciudadano';
@@ -142,19 +116,6 @@ const createUser = async (req, res) => {
         }
       } catch (error) {
         console.error('Error al obtener tipo de persona:', error);
-      }
-    }
-    // Si se proporcionó un cargo pero no un ID de tipo persona, buscar el tipo por nombre
-    else if (req.body.cargo && !datosPersonalesCombinados.idTipoPersona) {
-      try {
-        const tipoPersonaService = require('../services/tipoPersonaService');
-        const tipoPersona = await tipoPersonaService.getTipoPersonaByNombre(req.body.cargo);
-        
-        if (tipoPersona) {
-          datosPersonalesCombinados.idTipoPersona = tipoPersona.idtipopersona;
-        }
-      } catch (error) {
-        console.error('Error al obtener tipo de persona por cargo:', error);
       }
     }
     
@@ -234,53 +195,27 @@ const updateUser = async (req, res) => {
     
     // Procesar ubicación si es necesario
     try {
-      const { direccion, idMunicipio, municipio, idProvincia, provincia } = datosPersonalesCombinados;
+      const { direccion, idMunicipio } = datosPersonalesCombinados;
       
-      if (direccion && (idMunicipio || municipio || idProvincia || provincia)) {
-        // Determinar el municipio
-        let municipioId = idMunicipio;
+      // Si tenemos dirección y municipio, crear ubicación
+      if (direccion && idMunicipio) {
+        const ubicacionService = require('../services/ubicacionService');
+        const newUbicacion = await ubicacionService.createUbicacion({
+          direccion,
+          idMunicipio
+        });
         
-        // Si se proporciona nombre de municipio, buscar su ID
-        if (!municipioId && municipio) {
-          const municipioService = require('../services/municipioService');
-          const municipios = await municipioService.getAllMunicipios({
-            nombreMunicipio: municipio,
-            idProvincia
-          });
-          
-          if (municipios && municipios.length > 0) {
-            municipioId = municipios[0].id;
-          }
-        }
-        
-        // Si se proporciona provincia pero no municipio, obtener un municipio de esa provincia
-        if (!municipioId && idProvincia) {
-          const municipioService = require('../services/municipioService');
-          const municipios = await municipioService.getAllMunicipios({
-            idProvincia,
-            limit: 1
-          });
-          
-          if (municipios && municipios.length > 0) {
-            municipioId = municipios[0].id;
-          }
-        }
-        
-        // Si tenemos dirección y municipio y no hay idUbicacion, crear ubicación
-        if (direccion && municipioId && !datosPersonalesCombinados.idUbicacion) {
-          const ubicacionService = require('../services/ubicacionService');
-          const newUbicacion = await ubicacionService.createUbicacion({
-            direccion,
-            idMunicipio: municipioId
-          });
-          
-          if (newUbicacion) {
-            datosPersonalesCombinados.idUbicacion = newUbicacion.id;
-          }
+        if (newUbicacion) {
+          datosPersonalesCombinados.idUbicacion = newUbicacion.id;
         }
       }
     } catch (error) {
       console.error('Error al procesar ubicación:', error);
+    }
+    
+    // Usar idTipoPersona directamente si está en el body
+    if (!datosPersonalesCombinados.idTipoPersona && req.body.idTipoPersona) {
+      datosPersonalesCombinados.idTipoPersona = req.body.idTipoPersona;
     }
     
     // Si se proporcionó un cargo pero no un ID de tipo persona, buscar el tipo por nombre

@@ -190,10 +190,10 @@ components:
           type: string
           example: "8091234567"
           description: "Número de teléfono (10 dígitos). Obligatorio para crear empleados."
-        cargo:
-          type: string
-          example: "Oficial"
-          description: "Cargo o tipo de persona. Obligatorio para crear empleados."
+        idTipoPersona:
+          type: integer
+          example: 2
+          description: "ID del tipo de persona. Obligatorio para crear empleados."
         # Datos de ubicación (obligatorios para crear empleados)
         direccion:
           type: string
@@ -202,19 +202,11 @@ components:
         idMunicipio:
           type: integer
           example: 5
-          description: "ID del municipio. Obligatorio para crear empleados (a menos que se proporcione municipio y provincia)."
-        municipio:
-          type: string
-          example: "Santo Domingo Este"
-          description: "Nombre del municipio (alternativa a idMunicipio)."
+          description: "ID del municipio. Obligatorio para crear empleados."
         idProvincia:
           type: integer
           example: 2
-          description: "ID de la provincia."
-        provincia:
-          type: string
-          example: "Santo Domingo"
-          description: "Nombre de la provincia."
+          description: "ID de la provincia (opcional)."
 
     UserUpdateRequest:
       type: object
@@ -279,11 +271,11 @@ components:
             idTipoPersona:
               type: integer
               example: 2
-              description: ID del tipo de persona
+              description: ID del tipo de persona (recomendado)
             cargo:
               type: string
               example: "Oficial"
-              description: Cargo o tipo de persona (alternativa a idTipoPersona)
+              description: Cargo o tipo de persona (alternativa no recomendada, usar idTipoPersona)
             direccion:
               type: string
               description: Dirección física (se creará o actualizará la ubicación correspondiente)
@@ -292,6 +284,10 @@ components:
               type: integer
               description: ID del municipio
               example: 5
+            idProvincia:
+              type: integer
+              description: ID de la provincia (opcional)
+              example: 2
 
     UserDeleteRequest:
       type: object
@@ -1717,11 +1713,23 @@ components:
                         type: string
                         example: "Calle Principal #123"
                       municipio:
-                        type: string
-                        example: "Santo Domingo Este"
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 5
+                          nombre:
+                            type: string
+                            example: "Santo Domingo Este"
                       provincia:
-                        type: string
-                        example: "Santo Domingo"
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 2
+                          nombre:
+                            type: string
+                            example: "Santo Domingo"
               permisos:
                 type: object
                 properties:
@@ -1870,21 +1878,33 @@ components:
                 nombre:
                   type: string
                   example: "Ciudadano"
-            ubicacion:
-              type: object
-              properties:
-                id:
-                  type: integer
-                  example: 1
-                direccion:
-                  type: string
-                  example: "Calle Principal #123"
-                municipio:
-                  type: string
-                  example: "Santo Domingo Este"
-                provincia:
-                  type: string
-                  example: "Santo Domingo"
+              ubicacion:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  direccion:
+                    type: string
+                    example: "Calle Principal #123"
+                  municipio:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 5
+                      nombre:
+                        type: string
+                        example: "Santo Domingo Este"
+                    provincia:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 2
+                        nombre:
+                          type: string
+                          example: "Santo Domingo"
 
 
 
@@ -2317,11 +2337,23 @@ paths:
                                 type: string
                                 example: "Calle Principal #123"
                               municipio:
-                                type: string
-                                example: "Santo Domingo Este"
-                              provincia:
-                                type: string
-                                example: "Santo Domingo"
+                                type: object
+                                properties:
+                                  id:
+                                    type: integer
+                                    example: 5
+                                  nombre:
+                                    type: string
+                                    example: "Santo Domingo Este"
+                                provincia:
+                                  type: object
+                                  properties:
+                                    id:
+                                      type: integer
+                                      example: 2
+                                    nombre:
+                                      type: string
+                                      example: "Santo Domingo"
         '400':
           description: Datos inválidos
           content:
@@ -2560,11 +2592,23 @@ paths:
                                 type: string
                                 example: "Calle Principal #123"
                               municipio:
-                                type: string
-                                example: "Santo Domingo Este"
-                              provincia:
-                                type: string
-                                example: "Santo Domingo"
+                                type: object
+                                properties:
+                                  id:
+                                    type: integer
+                                    example: 5
+                                  nombre:
+                                    type: string
+                                    example: "Santo Domingo Este"
+                                provincia:
+                                  type: object
+                                  properties:
+                                    id:
+                                      type: integer
+                                      example: 2
+                                    nombre:
+                                      type: string
+                                      example: "Santo Domingo"
         '401':
           description: No autorizado
           content:
