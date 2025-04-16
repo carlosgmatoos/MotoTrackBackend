@@ -5438,63 +5438,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
                 
-  /solicitud/limite-vehiculos:
-    get:
-      tags:
-        - Solicitudes
-      summary: Obtener información sobre el límite de vehículos del ciudadano
-      description: Verifica si el ciudadano ha alcanzado el límite de vehículos permitidos (2 vehículos por ciudadano)
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: Información de límite obtenida correctamente
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: object
-                    properties:
-                      cantidadVehiculos:
-                        type: integer
-                        description: Número actual de vehículos activos con matrícula generada del ciudadano
-                        example: 1
-                      limiteAlcanzado:
-                        type: boolean
-                        description: Indica si el ciudadano ha alcanzado el límite máximo de vehículos
-                        example: false
-                      limiteMaximo:
-                        type: integer
-                        description: Número máximo de vehículos permitidos por ciudadano
-                        example: 2
-                      vehiculosDisponibles:
-                        type: integer
-                        description: Número de vehículos adicionales que puede registrar el ciudadano
-                        example: 1
-        '401':
-          description: No autorizado, token requerido o inválido
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Perfil de persona no encontrado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Error del servidor
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-                
   /solicitud/empleado/todas:
     get:
       tags:
