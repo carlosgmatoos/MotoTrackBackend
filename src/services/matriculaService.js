@@ -89,7 +89,7 @@ const generarMatriculaUnica = async () => {
 const crearMatriculaPendiente = async () => {
   try {
     const result = await pool.query(
-      'INSERT INTO Matricula (matriculaGenerada, estado, fechaEmisionMatricula) VALUES ($1, $2, NULL) RETURNING *',
+      'INSERT INTO Matricula (matriculaGenerada, estado, fechaEmisionMatricula) VALUES ($1, $2, CURRENT_DATE) RETURNING *',
       ['PENDIENTE', 'Pendiente']
     );
     

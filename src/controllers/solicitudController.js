@@ -1,32 +1,125 @@
 const solicitudService = require('../services/solicitudService');
 const { handleError } = require('../utils/errorHandler');
 const personaService = require('../services/personaService');
-const ubicacionService = require('../services/ubicacionService');
-const { pool } = require('../db');
 
 /**
  * Crear una nueva solicitud de matrícula
  */
 const crearSolicitud = async (req, res) => {
   try {
+    // Convertir cualquier variante de año a ano
+    if (req.body['año'] !== undefined) {
+      req.body.ano = req.body['año'];
+      delete req.body['año'];
+    }
+    
+    if (req.body['aÃ±o'] !== undefined) {
+      req.body.ano = req.body['aÃ±o'];
+      delete req.body['aÃ±o'];
+    }
+    
     // Extraer datos de la solicitud
     const { 
       // Vehículo
-      chasis, tipoUso, idMarca, idModelo, color, cilindraje, año,
+      chasis, tipoUso, idMarca, idModelo, color, cilindraje, ano,
       // Seguro (opcional)
-      seguro,
-      // Documentos
-      docCedula, docLicencia, docFacturaVehiculo, docSeguro,
+      seguro, datoSeguro,
       // Datos personales
       persona
     } = req.body;
+    
+    // Agregar el ID del usuario autenticado a los datos de la persona
+    if (req.user) {
+      // Asignar el ID del usuario autenticado (puede estar en id o idUsuario)
+      persona.idUsuario = req.user.id || req.user.idUsuario;
+      console.log(`Asociando solicitud al usuario autenticado: ${persona.idUsuario}`);
+      
+      // También agregar correo si está disponible y no se proporcionó
+      if (req.user.correo && !persona.correo) {
+        persona.correo = req.user.correo;
+      }
+    } else {
+      console.log('No hay usuario autenticado para asociar a la solicitud');
+    }
+    
+    // Procesar archivos y obtener URLs
+    let documentos = {};
+    
+    if (req.files) {
+      // Procesar cada tipo de documento
+      if (req.files.cedula && req.files.cedula.length > 0) {
+        documentos.docCedula = `/uploads/cedulas/${Date.now()}-${req.files.cedula[0].originalname}`;
+      }
+      
+      if (req.files.licencia && req.files.licencia.length > 0) {
+        documentos.docLicencia = `/uploads/licencias/${Date.now()}-${req.files.licencia[0].originalname}`;
+      }
+      
+      if (req.files.seguro_doc && req.files.seguro_doc.length > 0) {
+        documentos.docSeguro = `/uploads/seguros/${Date.now()}-${req.files.seguro_doc[0].originalname}`;
+      }
+      
+      if (req.files.factura && req.files.factura.length > 0) {
+        documentos.docFacturaVehiculo = `/uploads/facturas/${Date.now()}-${req.files.factura[0].originalname}`;
+      }
+    }
 
-    // Validaciones básicas
-    if (!chasis || !tipoUso || !idMarca || !idModelo) {
+    // Usar el valor de ano
+    let anioVehiculo = ano;
+    
+    // Intentar convertir a número si es string
+    if (typeof anioVehiculo === 'string') {
+      anioVehiculo = parseInt(anioVehiculo, 10);
+    }
+    
+    // Establecer un valor predeterminado si sigue siendo inválido
+    if (anioVehiculo === undefined || anioVehiculo === null || isNaN(anioVehiculo)) {
+      // Si no se puede extraer, usar valor directo del body
+      anioVehiculo = parseInt(String(req.body.ano || 0), 10);
+    }
+
+    // Validación crítica - no continuar si año sigue siendo inválido
+    if (isNaN(anioVehiculo) || anioVehiculo < 1900) {
+      return res.status(400).json({
+        success: false,
+        error: 'Datos inválidos',
+        message: 'El año del vehículo es obligatorio y debe ser un número válido mayor a 1900'
+      });
+    }
+
+    // Usar datoSeguro o seguro, priorizando datoSeguro
+    const datosSeguro = datoSeguro || seguro;
+
+    // Verificar que tenemos los datos mínimos para crear la solicitud
+    if (!chasis) {
       return res.status(400).json({
         success: false,
         error: 'Datos incompletos',
-        message: 'Faltan datos obligatorios del vehículo'
+        message: 'El número de chasis es obligatorio'
+      });
+    }
+
+    if (!tipoUso) {
+      return res.status(400).json({
+        success: false,
+        error: 'Datos incompletos',
+        message: 'El tipo de uso es obligatorio'
+      });
+    }
+
+    if (!idMarca) {
+      return res.status(400).json({
+        success: false,
+        error: 'Datos incompletos',
+        message: 'La marca es obligatoria'
+      });
+    }
+
+    if (!idModelo) {
+      return res.status(400).json({
+        success: false,
+        error: 'Datos incompletos',
+        message: 'El modelo es obligatorio'
       });
     }
 
@@ -34,269 +127,120 @@ const crearSolicitud = async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Datos incompletos',
-        message: 'Faltan datos de la persona'
+        message: 'Los datos de la persona son obligatorios'
       });
     }
 
-    // Obtener ID del ciudadano a partir del usuario autenticado o buscar por la relación usuario
-    let idCiudadano = req.user.idPersona;
-    const correoUsuario = req.user.correo;
-    const idUsuario = req.user.idUsuario;
-
-    // Si no se encuentra en req.user, intentar buscar en la base de datos
-    if (!idCiudadano) {
-      try {
-        // Buscar persona asociada al idUsuario actual
-        const personaAsociada = await personaService.getPersonaByUsuarioId(idUsuario);
-
-        if (personaAsociada) {
-          // Si existe una persona asociada, usar su ID
-          idCiudadano = personaAsociada.idpersona;
-          console.log(`Persona encontrada para usuario ${idUsuario}: ${idCiudadano}`);
-        }
-      } catch (busquedaError) {
-        console.error('Error al buscar persona por usuario:', busquedaError);
-      }
-    }
-
-    // Si aún no se encuentra, crear una nueva persona
-    if (!idCiudadano) {
-      try {
-        console.log(`Creando nueva persona para usuario ${idUsuario}`);
-        // Primero, crear ubicación
-        let idUbicacion = null;
-        
-        if (persona.direccion && persona.idMunicipio) {
-          const ubicacionData = {
-            direccion: persona.direccion,
-            idMunicipio: persona.idMunicipio
-          };
-          
-          const nuevaUbicacion = await ubicacionService.createUbicacion(ubicacionData);
-          
-          if (nuevaUbicacion && nuevaUbicacion.id) {
-            idUbicacion = nuevaUbicacion.id;
-          }
-        }
-        
-        // Crear la persona asociada al usuario
-        const personaData = {
-          nombres: persona.nombres,
-          apellidos: persona.apellidos,
-          cedula: persona.cedula,
-          fechaNacimiento: persona.fechaNacimiento,
-          estadoCivil: persona.estadoCivil,
-          sexo: persona.sexo,
-          telefono: persona.telefono,
-          idUbicacion: idUbicacion,
-          idTipoPersona: 3, // Ciudadano
-          idUsuario: idUsuario
-        };
-        
-        const nuevaPersona = await personaService.createPersona(personaData);
-        
-        if (nuevaPersona && nuevaPersona.idpersona) {
-          idCiudadano = nuevaPersona.idpersona;
-        } else {
-          return res.status(500).json({
-            success: false,
-            error: 'Error al crear persona',
-            message: 'No se pudo crear un registro de persona asociado a su usuario'
-          });
-        }
-      } catch (personaError) {
-        console.error('Error al crear persona:', personaError);
-        return res.status(500).json({
-          success: false,
-          error: 'Error al crear persona',
-          message: personaError.message || 'Error al crear registro de persona'
-        });
-      }
-    } else {
-      // Si ya existe una persona asociada al usuario, actualizar sus datos
-      try {
-        console.log(`Actualizando persona existente: ${idCiudadano}`);
-        // Primero, obtener la información actual
-        const personaActual = await personaService.getPersonaById(idCiudadano);
-        
-        if (!personaActual) {
-          console.error(`No se encontró información para la persona con ID ${idCiudadano}`);
-          return res.status(404).json({
-            success: false,
-            error: 'Persona no encontrada',
-            message: 'No se encontró el registro de persona asociado a su usuario'
-          });
-        }
-
-        console.log(`Datos actuales de persona: ${JSON.stringify(personaActual)}`);
-
-        // Actualizar la ubicación si se proporcionan nuevos datos
-        let idUbicacion = personaActual.idubicacion;
-        
-        if (persona.direccion && persona.idMunicipio && 
-           (!idUbicacion || 
-            (personaActual.direccion !== persona.direccion || 
-             (personaActual.idmunicipio && personaActual.idmunicipio.toString() !== persona.idMunicipio.toString())))) {
-          
-          console.log('Es necesario actualizar la ubicación');
-          
-          if (idUbicacion) {
-            // Actualizar ubicación existente
-            await ubicacionService.updateUbicacion(idUbicacion, {
-              direccion: persona.direccion,
-              idMunicipio: persona.idMunicipio
-            });
-            console.log(`Ubicación actualizada: ${idUbicacion}`);
-          } else {
-            // Crear nueva ubicación
-            const ubicacionData = {
-              direccion: persona.direccion,
-              idMunicipio: persona.idMunicipio
-            };
-            
-            const nuevaUbicacion = await ubicacionService.createUbicacion(ubicacionData);
-            
-            if (nuevaUbicacion && nuevaUbicacion.id) {
-              idUbicacion = nuevaUbicacion.id;
-              console.log(`Nueva ubicación creada: ${idUbicacion}`);
-              
-              // Actualizar la referencia en la persona
-              await personaService.updatePersona(idCiudadano, {
-                idUbicacion: idUbicacion
-              });
-              console.log(`Referencia de ubicación actualizada en persona ${idCiudadano}`);
-            }
-          }
-        }
-        
-        // Actualizar los datos personales
-        console.log(`Actualizando datos personales para persona ${idCiudadano}`);
-        const datosActualizados = await personaService.updatePersona(idCiudadano, {
-          nombres: persona.nombres,
-          apellidos: persona.apellidos,
-          cedula: persona.cedula,
-          fechaNacimiento: persona.fechaNacimiento,
-          estadoCivil: persona.estadoCivil,
-          sexo: persona.sexo,
-          telefono: persona.telefono
-        });
-        console.log(`Datos personales actualizados: ${JSON.stringify(datosActualizados)}`);
-        
-        // Si el correo cambió, actualizar también en la tabla Usuario
-        if (persona.correo && persona.correo !== correoUsuario) {
-          console.log(`Actualizando correo de usuario ${idUsuario} de ${correoUsuario} a ${persona.correo}`);
-          await pool.query(
-            'UPDATE Usuario SET correo = $1 WHERE idUsuario = $2',
-            [persona.correo, idUsuario]
-          );
-        }
-        
-      } catch (updateError) {
-        console.error('Error al actualizar datos de persona:', updateError);
-        return res.status(500).json({
-          success: false,
-          error: 'Error al actualizar datos personales',
-          message: updateError.message || 'Error al actualizar los datos personales asociados a su usuario'
-        });
-      }
-    }
-
-    // Validar seguro si se proporciona
-    if (seguro) {
-      if (seguro.idSeguro) {
-        if (!seguro.numeroPoliza) {
-          return res.status(400).json({
-            success: false,
-            error: 'Datos de seguro incompletos',
-            message: 'Si proporciona idSeguro, debe incluir también el numeroPoliza'
-          });
-        }
-      } else if (seguro.proveedor) {
-        if (!seguro.numeroPoliza) {
-          return res.status(400).json({
-            success: false,
-            error: 'Datos de seguro incompletos',
-            message: 'Si proporciona proveedor, debe incluir también el numeroPoliza'
-          });
-        }
-      } else {
-        return res.status(400).json({
-          success: false,
-          error: 'Datos de seguro incompletos',
-          message: 'Debe proporcionar idSeguro o proveedor para el seguro'
-        });
-      }
-    }
-
-    // Crear la solicitud
-    const nuevaSolicitud = await solicitudService.crearSolicitud({
-      idCiudadano,
-      vehiculo: {
-        chasis,
-        tipoUso,
-        idMarca,
-        idModelo,
-        color,
-        cilindraje,
-        año
-      },
-      seguro,
-      documentos: {
-        docCedula,
-        docLicencia,
-        docFacturaVehiculo,
-        docSeguro
-      },
-      persona
-    });
-
-    let mensaje = 'Solicitud creada exitosamente';
-    // Si la solicitud está en cola (todos los empleados están ocupados)
-    if (nuevaSolicitud && nuevaSolicitud.enCola) {
-      mensaje += '. Su solicitud ha sido puesta en cola porque todos los empleados tienen actualmente el máximo de 5 solicitudes pendientes. Será procesada tan pronto un empleado esté disponible.';
-    }
-
-    res.status(201).json({
-      success: true,
-      message: mensaje,
-      data: nuevaSolicitud
-    });
-  } catch (error) {
-    if (error.message === 'Ya existe un vehículo con ese número de chasis') {
+    // Validar campos básicos de la persona
+    if (!persona.nombres || !persona.apellidos || !persona.cedula) {
       return res.status(400).json({
         success: false,
-        error: 'Chasis duplicado',
-        message: error.message
-      });
-    }
-    
-    // Si es un error de empleados, dar mensaje específico
-    if (error.message.includes('No hay empleados registrados en el sistema')) {
-      return res.status(500).json({
-        success: false,
-        error: 'No hay empleados disponibles',
-        message: 'No hay empleados registrados en el sistema actualmente. Contacte al administrador.'
+        error: 'Datos incompletos',
+        message: 'Los nombres, apellidos y cédula de la persona son obligatorios'
       });
     }
 
-    if (error.message.includes('No se encontró ningún empleado disponible')) {
-      return res.status(500).json({
+    // Si se proporciona seguro, validar campos requeridos
+    if (datosSeguro) {
+      // Si se proporciona idSeguro o numeroPoliza, verificar que sean valores válidos
+      if (datosSeguro.idSeguro && typeof datosSeguro.idSeguro !== 'number') {
+        return res.status(400).json({
+          success: false,
+          error: 'Datos inválidos',
+          message: 'El ID del seguro debe ser un número válido'
+        });
+      }
+      
+      if (datosSeguro.numeroPoliza && typeof datosSeguro.numeroPoliza !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: 'Datos inválidos',
+          message: 'El número de póliza debe ser una cadena de texto válida'
+        });
+      }
+    }
+
+    // Validar que se han subido los archivos obligatorios
+    if (!documentos.docCedula) {
+      return res.status(400).json({
         success: false,
-        error: 'No hay empleados disponibles',
-        message: 'No se encontraron empleados disponibles para asignar. Contacte al administrador.'
+        error: 'Archivos incompletos',
+        message: 'El documento de cédula es obligatorio'
       });
     }
-    
-    // Si es un error de empleados con 5 solicitudes, no lo tratamos como error sino como solicitud en cola
-    if (error.message && error.message.includes('No hay empleados activos disponibles con menos de 5 solicitudes pendientes')) {
-      return res.status(201).json({
+
+    if (!documentos.docLicencia) {
+      return res.status(400).json({
+        success: false,
+        error: 'Archivos incompletos',
+        message: 'El documento de licencia es obligatorio'
+      });
+    }
+
+    if (!documentos.docFacturaVehiculo) {
+      return res.status(400).json({
+        success: false,
+        error: 'Archivos incompletos',
+        message: 'El documento de factura del vehículo es obligatorio'
+      });
+    }
+
+    // Crear el objeto de datos del vehículo
+    const datosVehiculo = {
+      chasis,
+      tipoUso,
+      idMarca,
+      idModelo,
+      color,
+      cilindraje,
+      ano: anioVehiculo
+    };
+
+    // Llamar al servicio para crear la solicitud
+    try {
+      const solicitudCreada = await solicitudService.crearSolicitud(
+        datosVehiculo,
+        persona,
+        datosSeguro,
+        documentos
+      );
+
+      // Transformar la respuesta al formato deseado
+      // Normalizar nombres de propiedades a minúsculas
+      const respuesta = {};
+      
+      // Convertir todas las claves a minúsculas para tener un formato estándar
+      if (solicitudCreada) {
+        Object.keys(solicitudCreada).forEach(key => {
+          const keyLower = key.toLowerCase();
+          respuesta[keyLower] = solicitudCreada[key];
+        });
+      }
+      
+      if (solicitudCreada?.enCola) {
+        respuesta.encola = true;
+      }
+      
+      res.status(201).json({
         success: true,
-        message: 'Solicitud creada exitosamente. Su solicitud está en cola y será atendida cuando un empleado esté disponible.',
-        data: null
+        message: 'Solicitud creada exitosamente',
+        data: respuesta
       });
+    } catch (error) {
+      // Manejar específicamente el error de límite de vehículos
+      if (error.message && error.message.includes('El ciudadano ya tiene') && error.message.includes('vehículos registrados')) {
+        return res.status(400).json({
+          success: false,
+          error: 'Límite de vehículos alcanzado',
+          message: error.message
+        });
+      }
+      
+      // Para otros errores, pasar al manejador de errores general
+      throw error;
     }
-    
-    handleError(res, error, 'Error al crear la solicitud');
+  } catch (error) {
+    handleError(res, error, 'Error al crear solicitud');
   }
 };
 
@@ -305,50 +249,60 @@ const crearSolicitud = async (req, res) => {
  */
 const obtenerSolicitudesCiudadano = async (req, res) => {
   try {
-    // Obtener ID del ciudadano
-    let idCiudadano = req.user.idPersona;
+    // Obtener ID del usuario autenticado
+    const idUsuario = req.user.idUsuario || req.user.id;
     
-    // Si no tenemos idPersona directamente, intentar obtenerlo por otros medios
-    if (!idCiudadano) {
-      // Intentar obtener desde datosPersonales si existe
-      if (req.user.datosPersonales && req.user.datosPersonales.idPersona) {
-        idCiudadano = req.user.datosPersonales.idPersona;
-        console.log(`Usando idPersona desde datosPersonales: ${idCiudadano}`);
-      } 
-      // Si aún no tenemos idPersona, buscar por idUsuario
-      else if (req.user.idUsuario || req.user.id) {
-        const idUsuario = req.user.idUsuario || req.user.id;
-        try {
-          console.log(`Buscando persona por idUsuario: ${idUsuario}`);
-          const personaAsociada = await personaService.getPersonaByUsuarioId(idUsuario);
+    if (!idUsuario) {
+      return res.status(401).json({
+        success: false,
+        error: 'No autenticado',
+        message: 'No se puede identificar el usuario autenticado'
+      });
+    }
+    
+    console.log(`Obteniendo solicitudes para el usuario ID: ${idUsuario}`);
+    
+    // Obtener ID de la persona asociada al usuario
+    let idPersona = req.user.idPersona;
+    
+    // Si no tenemos idPersona directamente, intentar obtenerlo
+    if (!idPersona && req.user.datosPersonales?.idPersona) {
+      idPersona = req.user.datosPersonales.idPersona;
+      console.log(`Usando ID de persona desde datosPersonales: ${idPersona}`);
+    }
+    
+    // Si todavía no tenemos idPersona, buscarlo usando el servicio de personas
+    if (!idPersona) {
+      try {
+        const personaAsociada = await personaService.getPersonaByUsuarioId(idUsuario);
+        
+        if (personaAsociada) {
+          idPersona = personaAsociada.idpersona;
+          console.log(`Encontrada persona ID ${idPersona} asociada al usuario ID ${idUsuario}`);
+        } else {
+          console.log(`No se encontró ninguna persona asociada al usuario ID ${idUsuario}`);
           
-          if (personaAsociada) {
-            idCiudadano = personaAsociada.idpersona;
-            console.log(`Persona encontrada por idUsuario: ${idCiudadano}`);
-          }
-        } catch (error) {
-          console.error('Error al buscar persona por idUsuario:', error);
+          return res.status(404).json({
+            success: false,
+            error: 'Datos incompletos',
+            message: 'No tiene un perfil de persona asociado a su cuenta. Por favor complete su perfil antes de realizar solicitudes.'
+          });
         }
+      } catch (error) {
+        console.error(`Error al buscar persona para usuario ${idUsuario}:`, error);
+        
+        return res.status(500).json({
+          success: false,
+          error: 'Error al buscar datos de persona',
+          message: 'Ocurrió un error al buscar sus datos personales'
+        });
       }
     }
     
-    if (!idCiudadano) {
-      // Depurar información del usuario para diagnóstico
-      console.error('No se pudo encontrar idPersona para el ciudadano:', {
-        idUsuario: req.user.idUsuario || req.user.id,
-        correo: req.user.correo,
-        tipoUsuario: req.user.tipoUsuario,
-        datosDisponibles: Object.keys(req.user)
-      });
-      
-      return res.status(400).json({
-        success: false,
-        error: 'Datos de persona incompletos',
-        message: 'No se encontraron datos de persona asociados a su usuario'
-      });
-    }
+    // Obtener las solicitudes usando el ID de persona
+    const solicitudes = await solicitudService.obtenerSolicitudesPorCiudadano(idPersona, idUsuario);
     
-    const solicitudes = await solicitudService.obtenerSolicitudesPorCiudadano(idCiudadano);
+    console.log(`Se encontraron ${solicitudes.length} solicitudes para la persona ID ${idPersona} (Usuario ID ${idUsuario})`);
     
     res.status(200).json({
       success: true,
@@ -356,6 +310,7 @@ const obtenerSolicitudesCiudadano = async (req, res) => {
       data: solicitudes
     });
   } catch (error) {
+    console.error('Error en obtenerSolicitudesCiudadano:', error);
     handleError(res, error, 'Error al obtener solicitudes');
   }
 };
@@ -412,21 +367,18 @@ const obtenerSolicitudesEmpleado = async (req, res) => {
       // Intentar obtener desde datosPersonales si existe
       if (req.user.datosPersonales && req.user.datosPersonales.idPersona) {
         idEmpleado = req.user.datosPersonales.idPersona;
-        console.log(`Usando idPersona desde datosPersonales: ${idEmpleado}`);
       } 
       // Si aún no tenemos idPersona, buscar por idUsuario
       else if (req.user.idUsuario || req.user.id) {
         const idUsuario = req.user.idUsuario || req.user.id;
         try {
-          console.log(`Buscando persona por idUsuario: ${idUsuario}`);
           const personaAsociada = await personaService.getPersonaByUsuarioId(idUsuario);
           
           if (personaAsociada) {
             idEmpleado = personaAsociada.idpersona;
-            console.log(`Persona encontrada por idUsuario: ${idEmpleado}`);
           }
         } catch (error) {
-          console.error('Error al buscar persona por idUsuario:', error);
+          // Ignorar error
         }
       }
     }
@@ -435,14 +387,6 @@ const obtenerSolicitudesEmpleado = async (req, res) => {
     const { marca, modelo, estado, fechaDesde, fechaHasta } = req.query;
     
     if (!idEmpleado) {
-      // Depurar información del usuario para diagnóstico
-      console.error('No se pudo encontrar idPersona para el usuario:', {
-        idUsuario: req.user.idUsuario || req.user.id,
-        correo: req.user.correo,
-        tipoUsuario: req.user.tipoUsuario,
-        datosDisponibles: Object.keys(req.user)
-      });
-      
       return res.status(400).json({
         success: false,
         error: 'Datos de persona incompletos',
@@ -513,9 +457,6 @@ const procesarSolicitud = async (req, res) => {
       });
     }
     
-    // Depurar información del usuario
-    console.log('Información de usuario en procesarSolicitud:', req.user);
-    
     // Obtener ID del empleado
     let idEmpleado = req.user.idPersona;
     
@@ -524,34 +465,23 @@ const procesarSolicitud = async (req, res) => {
       // Intentar obtener desde datosPersonales si existe
       if (req.user.datosPersonales && req.user.datosPersonales.idPersona) {
         idEmpleado = req.user.datosPersonales.idPersona;
-        console.log(`Usando idPersona desde datosPersonales: ${idEmpleado}`);
       } 
       // Si aún no tenemos idPersona, buscar por idUsuario
       else if (req.user.idUsuario || req.user.id) {
         const idUsuario = req.user.idUsuario || req.user.id;
         try {
-          console.log(`Buscando persona por idUsuario: ${idUsuario}`);
           const personaAsociada = await personaService.getPersonaByUsuarioId(idUsuario);
           
           if (personaAsociada) {
             idEmpleado = personaAsociada.idpersona;
-            console.log(`Persona encontrada por idUsuario: ${idEmpleado}`);
           }
         } catch (error) {
-          console.error('Error al buscar persona por idUsuario:', error);
+          // Ignorar error
         }
       }
     }
     
     if (!idEmpleado) {
-      // Depurar información del usuario para diagnóstico
-      console.error('No se pudo encontrar idPersona para el usuario:', {
-        idUsuario: req.user.idUsuario || req.user.id,
-        correo: req.user.correo,
-        tipoUsuario: req.user.tipoUsuario,
-        datosDisponibles: Object.keys(req.user)
-      });
-      
       return res.status(400).json({
         success: false,
         error: 'Datos de persona incompletos',
@@ -569,19 +499,12 @@ const procesarSolicitud = async (req, res) => {
           message: `No se encontró la solicitud para el vehículo con ID ${idVehiculo}`
         });
       }
-      console.log(`Solicitud encontrada previamente:`, {
-        idVehiculo: solicitudPrevia.idvehiculo,
-        estadoDecision: solicitudPrevia.estadodecision,
-        idEmpleadoAsignado: solicitudPrevia.idempleado
-      });
     } catch (error) {
-      console.error(`Error al verificar solicitud para vehículo ${idVehiculo}:`, error);
+      // Ignorar error
     }
     
-    console.log(`Procesando solicitud para vehículo ${idVehiculo} por empleado ${idEmpleado} con decisión ${estadoDecision}`);
-    
     const solicitudActualizada = await solicitudService.procesarSolicitud({
-      idSolicitud: idVehiculo, // Mantener compatibilidad con el servicio existente
+      idVehiculo,
       idEmpleado,
       estadoDecision,
       notaRevision,

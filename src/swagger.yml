@@ -2161,6 +2161,265 @@ components:
           type: string
           example: "Honda"
 
+    SolicitudCreateRequest:
+      type: object
+      required:
+        - chasis
+        - tipoUso
+        - idMarca
+        - idModelo
+        - color
+        - cilindraje
+        - ano
+        - cedula
+        - licencia
+        - factura
+        - persona
+      properties:
+        # Datos del vehículo
+        chasis:
+          type: string
+          description: Número de chasis del vehículo (17 caracteres)
+          example: "5YJSA1E27KF302623"
+        tipoUso:
+          type: string
+          description: Tipo de uso del vehículo
+          enum: [Personal, Recreativo, Transporte, Deportivo, Empresarial]
+          example: "Personal"
+        idMarca:
+          type: integer
+          description: ID de la marca del vehículo
+          example: 1
+        idModelo:
+          type: integer
+          description: ID del modelo del vehículo
+          example: 1
+        color:
+          type: string
+          description: Color del vehículo
+          example: "Negro"
+        cilindraje:
+          type: string
+          description: Cilindraje del vehículo
+          example: "150cc"
+        ano:
+          type: integer
+          description: Año del vehículo
+          example: 2022
+        # Datos del seguro (solo idSeguro y numeroPoliza)
+        seguro:
+          type: object
+          description: Información del seguro (opcional)
+          properties:
+            idSeguro:
+              type: integer
+              description: ID del seguro existente
+              example: 5
+            numeroPoliza:
+              type: string
+              description: Número de póliza del seguro
+              example: "PL98765432"
+        # Datos de persona/ciudadano (en el orden específico solicitado)
+        persona:
+          type: object
+          description: Información de la persona (requerida)
+          required:
+            - nombres
+            - apellidos
+            - cedula
+          properties:
+            nombres:
+              type: string
+              description: Nombres completos
+              example: "Juan Carlos"
+            apellidos:
+              type: string
+              description: Apellidos completos
+              example: "Pérez Rodríguez"
+            cedula:
+              type: string
+              description: Cédula de identidad (11 dígitos)
+              example: "40212345678"
+            fechaNacimiento:
+              type: string
+              format: date
+              description: Fecha de nacimiento
+              example: "1990-01-15"
+            estadoCivil:
+              type: string
+              enum: [soltero, casado, divorciado, viudo]
+              description: Estado civil
+              example: "soltero"
+            sexo:
+              type: string
+              enum: [M, F]
+              description: Sexo (M o F)
+              example: "M"
+            telefono:
+              type: string
+              description: Número de teléfono (10 dígitos)
+              example: "8091234567"
+            correo:
+              type: string
+              format: email
+              description: Correo electrónico
+              example: "usuario@ejemplo.com"
+            direccion:
+              type: string
+              description: Dirección completa
+              example: "Calle Principal #123, Santo Domingo"
+            idProvincia:
+              type: integer
+              description: ID de la provincia donde vive
+              example: 1
+            idMunicipio:
+              type: integer
+              description: ID del municipio donde vive
+              example: 1
+        # Documentos obligatorios
+        cedula:
+          type: string
+          format: binary
+          description: Archivo de cédula a subir (imagen o PDF). Obligatorio.
+        licencia:
+          type: string
+          format: binary
+          description: Archivo de licencia a subir (imagen o PDF). Obligatorio.
+        factura:
+          type: string
+          format: binary
+          description: Archivo de factura del vehículo a subir (imagen o PDF). Obligatorio.
+        seguro_doc:
+          type: string
+          format: binary
+          description: Archivo de seguro a subir (imagen o PDF). Opcional.
+
+    SolicitudResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Solicitud creada exitosamente"
+        data:
+          type: object
+          properties:
+            idpersona:
+              type: integer
+              example: 10
+            idempleado:
+              type: integer
+              example: 5
+            idmatricula:
+              type: integer
+              example: 15
+            idvehiculo:
+              type: integer
+              example: 20
+            idsolicitud:
+              type: integer
+              example: 25
+            doccedula:
+              type: string
+              example: "/uploads/cedulas/12345678.pdf"
+            doclicencia:
+              type: string
+              example: "/uploads/licencias/12345678.pdf"
+            docseguro:
+              type: string
+              example: "/uploads/seguros/s12345.pdf"
+            docfacturavehiculo:
+              type: string
+              example: "/uploads/facturas/f12345.pdf"
+            estadodecision:
+              type: string
+              example: "Pendiente"
+            motivorechazo:
+              type: string
+              example: null
+            notarevision:
+              type: string
+              example: null
+            detallerechazo:
+              type: string
+              example: null
+            fecharegistro:
+              type: string
+              format: date-time
+              example: "2023-05-15T10:30:00.000Z"
+            fechaprocesada:
+              type: string
+              format: date-time
+              example: null
+            chasis:
+              type: string
+              example: "5YJSA1E27KF302623"
+            tipouso:
+              type: string
+              example: "Personal"
+            idmodelo:
+              type: integer
+              example: 1
+            modelonombre:
+              type: string
+              example: "CBR 150R"
+            ano:
+              type: integer
+              example: 2022
+            color:
+              type: string
+              example: "Negro"
+            cilindraje:
+              type: string
+              example: "150cc"
+            marcanombre:
+              type: string
+              example: "Honda"
+            idmarca:
+              type: integer
+              example: 1
+            matriculagenerada:
+              type: string
+              example: null
+            estadomatricula:
+              type: string
+              example: "Pendiente"
+            fechaemisionmatricula:
+              type: string
+              format: date-time
+              example: null
+            ciudadanonombres:
+              type: string
+              example: "Juan Carlos"
+            ciudadanoapellidos:
+              type: string
+              example: "Pérez Gómez"
+            ciudadanocedula:
+              type: string
+              example: "40212345678"
+            ciudadanotelefono:
+              type: string
+              example: "8091234567"
+            ciudadanocorreo:
+              type: string
+              example: "juanperez@ejemplo.com"
+            empleadonombres:
+              type: string
+              example: null
+            empleadoapellidos:
+              type: string
+              example: null
+            numeropoliza:
+              type: string
+              example: "PL98765432"
+            idseguro:
+              type: integer
+              example: 5
+            encola:
+              type: boolean
+              example: false
 
 
 paths:
@@ -5119,181 +5378,23 @@ paths:
       tags:
         - Solicitudes
       summary: Crear una nueva solicitud de matrícula
-      description: Permite a un ciudadano crear una solicitud para matricular un vehículo
+      description: Crea una nueva solicitud de matrícula con los datos del vehículo, propietario y documentos adjuntos
       security:
         - BearerAuth: []
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
-              type: object
-              required:
-                - chasis
-                - tipoUso
-                - idMarca
-                - idModelo
-                - color
-                - cilindraje
-                - año
-                - docCedula
-                - docLicencia
-                - docFacturaVehiculo
-                - persona
-              properties:
-                # Datos del vehículo
-                chasis:
-                  type: string
-                  description: Número de chasis del vehículo (17 caracteres)
-                  example: "5YJSA1E27KF302623"
-                tipoUso:
-                  type: string
-                  description: Tipo de uso del vehículo
-                  enum: [Personal, Recreativo, Transporte, Deportivo, Empresarial]
-                  example: "Personal"
-                idMarca:
-                  type: integer
-                  description: ID de la marca del vehículo
-                  example: 1
-                idModelo:
-                  type: integer
-                  description: ID del modelo del vehículo
-                  example: 1
-                color:
-                  type: string
-                  description: Color del vehículo
-                  example: "Negro"
-                cilindraje:
-                  type: string
-                  description: Cilindraje del vehículo
-                  example: "150cc"
-                año:
-                  type: integer
-                  description: Año del vehículo
-                  example: 2022
-                # Datos del seguro
-                seguro:
-                  type: object
-                  description: Información del seguro (opcional)
-                  properties:
-                    idSeguro:
-                      type: integer
-                      description: ID del seguro
-                      example: 5
-                    numeroPoliza:
-                      type: string
-                      description: Número de póliza del seguro
-                      example: "PL98765432"
-                # Datos de persona/ciudadano
-                persona:
-                  type: object
-                  description: Información de la persona (requerida)
-                  required:
-                    - nombres
-                    - apellidos
-                    - cedula
-                    - fechaNacimiento
-                    - estadoCivil
-                    - sexo
-                    - telefono
-                    - direccion
-                    - idProvincia
-                    - idMunicipio
-                  properties:
-                    nombres:
-                      type: string
-                      description: Nombres completos
-                      example: "Juan Carlos"
-                    apellidos:
-                      type: string
-                      description: Apellidos completos
-                      example: "Pérez Rodríguez"
-                    cedula:
-                      type: string
-                      description: Cédula de identidad (11 dígitos)
-                      example: "40212345678"
-                    fechaNacimiento:
-                      type: string
-                      format: date
-                      description: Fecha de nacimiento
-                      example: "1990-01-15"
-                    estadoCivil:
-                      type: string
-                      enum: [soltero, casado, divorciado, viudo]
-                      description: Estado civil
-                      example: "soltero"
-                    sexo:
-                      type: string
-                      enum: [M, F]
-                      description: Sexo (M o F)
-                      example: "M"
-                    telefono:
-                      type: string
-                      description: Número de teléfono (10 dígitos)
-                      example: "8091234567"
-                    correo:
-                      type: string
-                      format: email
-                      description: Correo electrónico (opcional, se actualizará el asociado a la cuenta)
-                      example: "usuario@ejemplo.com"
-                    direccion:
-                      type: string
-                      description: Dirección
-                      example: "Calle Principal #123, Santo Domingo"
-                    idProvincia:
-                      type: integer
-                      description: ID de la provincia
-                      example: 1
-                    idMunicipio:
-                      type: integer
-                      description: ID del municipio
-                      example: 1
-                # Documentos
-                docCedula:
-                  type: string
-                  description: URL de la cédula subida a Supabase
-                  example: "https://storage.url/cedulas/12345678.pdf"
-                docLicencia:
-                  type: string
-                  description: URL de la licencia subida a Supabase
-                  example: "https://storage.url/licencias/12345678.pdf"
-                docFacturaVehiculo:
-                  type: string
-                  description: URL de la factura del vehículo subida a Supabase
-                  example: "https://storage.url/facturas/f12345.pdf"
-                docSeguro:
-                  type: string
-                  description: URL del documento del seguro subida a Supabase (opcional)
-                  example: "https://storage.url/seguros/s12345.pdf"
+              $ref: '#/components/schemas/SolicitudCreateRequest'
       responses:
         '201':
           description: Solicitud creada exitosamente
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Solicitud creada exitosamente"
-                  data:
-                    $ref: '#/components/schemas/Solicitud'
-        '400':
-          description: Datos inválidos o chasis duplicado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: No autorizado, token requerido o inválido
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  
+                $ref: '#/components/schemas/SolicitudResponse'
+
   /solicitud/mis-solicitudes:
     get:
       tags:
@@ -5327,7 +5428,64 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  
+                
+  /solicitud/limite-vehiculos:
+    get:
+      tags:
+        - Solicitudes
+      summary: Obtener información sobre el límite de vehículos del ciudadano
+      description: Verifica si el ciudadano ha alcanzado el límite de vehículos permitidos (2 vehículos por ciudadano)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Información de límite obtenida correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      cantidadVehiculos:
+                        type: integer
+                        description: Número actual de vehículos activos con matrícula generada del ciudadano
+                        example: 1
+                      limiteAlcanzado:
+                        type: boolean
+                        description: Indica si el ciudadano ha alcanzado el límite máximo de vehículos
+                        example: false
+                      limiteMaximo:
+                        type: integer
+                        description: Número máximo de vehículos permitidos por ciudadano
+                        example: 2
+                      vehiculosDisponibles:
+                        type: integer
+                        description: Número de vehículos adicionales que puede registrar el ciudadano
+                        example: 1
+        '401':
+          description: No autorizado, token requerido o inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Perfil de persona no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
   /solicitud/empleado/todas:
     get:
       tags:
@@ -5406,7 +5564,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  
+                
   /solicitud/procesar:
     put:
       tags:
@@ -5733,51 +5891,6 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/MatriculaBasica'
-        '500':
-          description: Error del servidor
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /matricula/mis-matriculas:
-    get:
-      tags:
-        - Matrículas
-      summary: Obtener matrículas del usuario autenticado
-      description: Obtiene todas las matrículas que pertenecen al usuario autenticado, con información completa del vehículo, modelo y marca
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: Matrículas obtenidas exitosamente
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  count:
-                    type: integer
-                    example: 2
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/MatriculaCompleta'
-        '400':
-          description: Error de solicitud
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: No autorizado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '500':
           description: Error del servidor
           content:
