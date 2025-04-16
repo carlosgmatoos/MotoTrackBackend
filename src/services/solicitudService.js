@@ -532,10 +532,10 @@ const obtenerIdUsuario = async (client, idPersona) => {
 /**
  * Obtener las solicitudes del ciudadano asociado al usuario autenticado
  */
-const obtenerSolicitudesPorCiudadano = async (idPersona, idUsuario = null) => {
+const obtenerSolicitudesPorCiudadano = async (idPersona, idUsuario = null, estado = null) => {
   const client = await pool.connect();
   try {
-    console.log(`Iniciando búsqueda de solicitudes - Persona ID: ${idPersona}, Usuario ID: ${idUsuario}`);
+    console.log(`Iniciando búsqueda de solicitudes - Persona ID: ${idPersona}, Usuario ID: ${idUsuario}, Estado: ${estado || 'Todos'}`);
     
     // Si no tenemos idPersona pero tenemos idUsuario, buscar la persona asociada
     if (!idPersona && idUsuario) {
@@ -561,6 +561,16 @@ const obtenerSolicitudesPorCiudadano = async (idPersona, idUsuario = null) => {
     
     console.log(`Buscando solicitudes para la persona ID ${idPersona}`);
     
+    // Preparar parámetros y consulta base
+    let queryParams = [idPersona];
+    let whereClause = 's.idPersona = $1';
+    
+    // Agregar filtro por estado si se especifica
+    if (estado) {
+      whereClause += ' AND s.estadoDecision = $2';
+      queryParams.push(estado);
+    }
+    
     // Buscar solicitudes para esta persona específica
     const result = await client.query(
       `SELECT s.*, 
@@ -575,9 +585,9 @@ const obtenerSolicitudesPorCiudadano = async (idPersona, idUsuario = null) => {
       JOIN Marca ma ON m.idMarca = ma.idMarca
       JOIN Matricula mat ON s.idMatricula = mat.idMatricula
       LEFT JOIN Persona e ON s.idEmpleado = e.idPersona
-      WHERE s.idPersona = $1
+      WHERE ${whereClause}
       ORDER BY s.fechaRegistro DESC`,
-      [idPersona]
+      queryParams
     );
     
     console.log(`Se encontraron ${result.rows.length} solicitudes para la persona ID ${idPersona}`);

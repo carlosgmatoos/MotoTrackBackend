@@ -252,6 +252,9 @@ const obtenerSolicitudesCiudadano = async (req, res) => {
     // Obtener ID del usuario autenticado
     const idUsuario = req.user.idUsuario || req.user.id;
     
+    // Obtener filtro de estado si existe
+    const { estado } = req.query;
+    
     if (!idUsuario) {
       return res.status(401).json({
         success: false,
@@ -260,7 +263,7 @@ const obtenerSolicitudesCiudadano = async (req, res) => {
       });
     }
     
-    console.log(`Obteniendo solicitudes para el usuario ID: ${idUsuario}`);
+    console.log(`Obteniendo solicitudes para el usuario ID: ${idUsuario}${estado ? `, filtradas por estado: ${estado}` : ''}`);
     
     // Obtener ID de la persona asociada al usuario
     let idPersona = req.user.idPersona;
@@ -299,8 +302,17 @@ const obtenerSolicitudesCiudadano = async (req, res) => {
       }
     }
     
+    // Validar el estado si se proporcionó
+    if (estado && !['Pendiente', 'Aprobada', 'Rechazada'].includes(estado)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Parámetro inválido',
+        message: 'El estado debe ser uno de los siguientes: Pendiente, Aprobada, Rechazada'
+      });
+    }
+    
     // Obtener las solicitudes usando el ID de persona
-    const solicitudes = await solicitudService.obtenerSolicitudesPorCiudadano(idPersona, idUsuario);
+    const solicitudes = await solicitudService.obtenerSolicitudesPorCiudadano(idPersona, idUsuario, estado);
     
     console.log(`Se encontraron ${solicitudes.length} solicitudes para la persona ID ${idPersona} (Usuario ID ${idUsuario})`);
     

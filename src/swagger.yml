@@ -5403,6 +5403,15 @@ paths:
       description: Devuelve el historial de solicitudes de matrícula del ciudadano que hace la petición
       security:
         - BearerAuth: []
+      parameters:
+        - name: estado
+          in: query
+          required: false
+          description: Filtrar por estado de la solicitud
+          schema:
+            type: string
+            enum: [Pendiente, Aprobada, Rechazada]
+            example: "Pendiente"
       responses:
         '200':
           description: Lista de solicitudes obtenida correctamente
