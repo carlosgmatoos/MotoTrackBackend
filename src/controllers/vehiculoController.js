@@ -50,16 +50,26 @@ const getAllVehiculos = async (req, res) => {
 const createVehiculo = async (req, res) => {
   try {
     const { 
-      chasis, tipoUso, idModelo, idPropietario, 
-      idTipoVehiculo, idSeguro, idMatricula 
+      chasis, tipoUso, idModelo, idTipoVehiculo, idSeguro, idMatricula 
     } = req.body;
     
-    // Validate data
-    if (!chasis || !tipoUso || !idModelo || !idPropietario || !idTipoVehiculo || !idSeguro) {
+    // Get the owner ID from the authenticated user
+    const idPropietario = req.user.idPersona;
+    
+    if (!idPropietario) {
       return res.status(400).json({
         success: false,
         error: 'Datos incompletos',
-        message: 'Chasis, tipo de uso, modelo, propietario, tipo de vehículo y seguro son obligatorios'
+        message: 'No se encontró la información del propietario. Debe estar autenticado.'
+      });
+    }
+    
+    // Validate data
+    if (!chasis || !tipoUso || !idModelo || !idTipoVehiculo || !idSeguro) {
+      return res.status(400).json({
+        success: false,
+        error: 'Datos incompletos',
+        message: 'Chasis, tipo de uso, modelo, tipo de vehículo y seguro son obligatorios'
       });
     }
     

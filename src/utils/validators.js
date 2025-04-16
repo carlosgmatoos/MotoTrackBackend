@@ -472,15 +472,13 @@ const validateTipoVehiculoData = (data) => {
 const validateSeguroData = (data) => {
   const errors = [];
   
-  // Validar proveedor
-  if (!data.proveedor) {
-    errors.push('El proveedor del seguro es obligatorio');
-  } else if (typeof data.proveedor !== 'string') {
-    errors.push('El proveedor del seguro debe ser texto');
-  } else if (data.proveedor.length < 2) {
-    errors.push('El proveedor del seguro debe tener al menos 2 caracteres');
-  } else if (data.proveedor.length > 100) {
-    errors.push('El proveedor del seguro no puede exceder los 100 caracteres');
+  // Validar idSeguro
+  if (!data.idSeguro) {
+    errors.push('El ID del seguro es obligatorio');
+  } else if (isNaN(parseInt(data.idSeguro))) {
+    errors.push('El ID del seguro debe ser un número');
+  } else if (parseInt(data.idSeguro) <= 0) {
+    errors.push('El ID del seguro debe ser un número positivo');
   }
   
   // Validar número de póliza
@@ -576,11 +574,6 @@ const validateVehiculoData = (data) => {
   };
 };
 
-/**
- * Valida y extrae datos personales de un usuario desde ambas fuentes (root y objeto anidado)
- * @param {Object} userData - Datos del usuario que pueden contener datos personales en raíz o anidados
- * @returns {Object} Objeto con datos personales combinados y valores booleanos indicando validez
- */
 const extractAndValidatePersonalData = (userData) => {
   // Extraer datos del objeto principal
   const {
@@ -669,12 +662,6 @@ const extractAndValidatePersonalData = (userData) => {
   };
 };
 
-/**
- * Valida datos para la creación de un usuario
- * @param {Object} userData - Datos del usuario a crear
- * @param {boolean} isEmployee - Si el usuario es un empleado (requiere validación adicional)
- * @returns {Object} Resultado de la validación
- */
 const validateUserCreationData = (userData, isEmployee = false) => {
   const errors = [];
   
@@ -720,12 +707,6 @@ const validateUserCreationData = (userData, isEmployee = false) => {
   };
 };
 
-/**
- * Valida datos para la actualización de un usuario
- * @param {Object} userData - Datos del usuario a actualizar
- * @param {boolean} isEmployee - Si el usuario es un empleado
- * @returns {Object} Resultado de la validación
- */
 const validateUserUpdateData = (userData, isEmployee = false) => {
   const errors = [];
   
@@ -784,7 +765,6 @@ module.exports = {
   validateTipoVehiculoData,
   validateSeguroData,
   validateVehiculoData,
-  // Nuevas funciones
   extractAndValidatePersonalData,
   validateUserCreationData,
   validateUserUpdateData

@@ -34,7 +34,8 @@ const authMiddleware = async (req, res, next) => {
       // Obtener información del usuario desde la base de datos
       const user = await userService.getUsers({ 
         idUsuario: decoded.id,
-        includePermisos: true
+        includePermisos: true,
+        includePersonaData: true  // Asegurarse de incluir datos de persona
       });
       
       if (!user) {
@@ -42,6 +43,30 @@ const authMiddleware = async (req, res, next) => {
           success: false,
           message: 'Usuario no encontrado o inactivo'
         });
+      }
+      
+      // Si tenemos datos del usuario pero no idPersona, intentar obtenerlos
+      if (!user.idPersona && !user.datosPersonales) {
+        // Importar el servicio de persona solo si es necesario
+        const personaService = require('../services/personaService');
+        try {
+          const personaData = await personaService.getPersonaByUsuarioId(user.idUsuario || user.id);
+          if (personaData) {
+            // Agregar datos de persona al usuario
+            user.idPersona = personaData.idpersona;
+            user.datosPersonales = {
+              idPersona: personaData.idpersona,
+              nombres: personaData.nombres,
+              apellidos: personaData.apellidos,
+              cedula: personaData.cedula,
+              idTipoPersona: personaData.idtipopersona,
+              tipoPersonaNombre: personaData.tipopersonanombre
+            };
+            console.log(`Datos de persona añadidos al usuario: ${personaData.idpersona}`);
+          }
+        } catch (error) {
+          console.error('Error al obtener datos de persona:', error);
+        }
       }
       
       // Agregar información del usuario al objeto de solicitud
