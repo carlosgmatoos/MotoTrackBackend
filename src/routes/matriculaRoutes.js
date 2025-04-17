@@ -5,7 +5,7 @@ const { authMiddleware, isAdmin, isEmpleado } = require('../middlewares/authMidd
 
 // Rutas para administradores y empleados
 matriculaRouter.get('/matricula/todas', [authMiddleware, isAdmin], matriculaController.obtenerMatriculasCompletas);
-matriculaRouter.get('/matricula/activas', [authMiddleware, isEmpleado], matriculaController.obtenerMatriculasActivas);
+matriculaRouter.get('/matricula/activas', [authMiddleware, isEmpleado, isAdmin], matriculaController.obtenerMatriculasActivas);
 
 // Ruta para obtener matrículas del usuario autenticado
 matriculaRouter.get('/matricula/mis-matriculas', authMiddleware, matriculaController.obtenerMatriculasUsuario);

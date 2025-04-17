@@ -1909,173 +1909,257 @@ components:
     Solicitud:
       type: object
       properties:
-        idpersona:
-          type: integer
-          description: ID del ciudadano que creó la solicitud
-          example: 10
-        idempleado:
-          type: integer
-          description: ID del empleado asignado a la solicitud
-          example: 5
-        idmatricula:
-          type: integer
-          description: ID de la matrícula asociada
-          example: 15
-        idvehiculo:
-          type: integer
-          description: ID del vehículo asociado
-          example: 20
-        doccedula:
-          type: string
-          description: URL del documento de cédula
-          example: "https://storage.url/cedulas/12345678.pdf"
-        doclicencia:
-          type: string
-          description: URL del documento de licencia
-          example: "https://storage.url/licencias/12345678.pdf"
-        docseguro:
-          type: string
-          description: URL del documento de seguro (opcional)
-          example: "https://storage.url/seguros/s12345.pdf"
-        docfacturavehiculo:
-          type: string
-          description: URL del documento de factura del vehículo
-          example: "https://storage.url/facturas/f12345.pdf"
-        estadodecision:
-          type: string
-          description: Estado de la solicitud
-          enum: [Pendiente, Aprobada, Rechazada]
-          example: "Pendiente"
-        motivorechazo:
-          type: string
-          description: Motivo de rechazo (si aplica)
-          example: "Documentación incompleta"
-        notarevision:
-          type: string
-          description: Notas de revisión (si aplica)
-          example: "Todos los documentos están en orden"
-        detallerechazo:
-          type: string
-          description: Detalles del motivo de rechazo (si aplica)
-          example: "La licencia de conducir está vencida"
-        fecharegistro:
-          type: string
-          format: date
-          description: Fecha de creación de la solicitud
-          example: "2023-05-15"
-        fechaprocesada:
-          type: string
-          format: date-time
-          description: Fecha y hora en que se procesó la solicitud
-          example: "2023-05-20T14:35:42.000Z"
-        chasis:
-          type: string
-          description: Número de chasis del vehículo
-          example: "5YJSA1E27KF302623"
-        tipouso:
-          type: string
-          description: Tipo de uso del vehículo
-          example: "Personal"
-        idmodelo:
-          type: integer
-          description: ID del modelo del vehículo
-          example: 1
-        modelonombre:
-          type: string
-          description: Nombre del modelo del vehículo
-          example: "CBR 150R"
-        año:
-          type: integer
-          description: Año del modelo
-          example: 2022
-        color:
-          type: string
-          description: Color del vehículo
-          example: "Negro"
-        cilindraje:
-          type: string
-          description: Cilindraje del vehículo
-          example: "150cc"
-        marcanombre:
-          type: string
-          description: Nombre de la marca del vehículo
-          example: "Honda"
-        idmarca:
-          type: integer
-          description: ID de la marca del vehículo
-          example: 1
-        matriculagenerada:
-          type: string
-          description: Número de matrícula generada
-          example: "K123456"
-        estadomatricula:
-          type: string
-          description: Estado de la matrícula
-          enum: [Pendiente, Generada, Cancelada, Transferida]
-          example: "Generada"
-        fechaemisionmatricula:
-          type: string
-          format: date
-          description: Fecha de emisión de la matrícula
-          example: "2023-05-20"
-        ciudadanonombres:
-          type: string
-          description: Nombres del ciudadano
-          example: "Juan Carlos"
-        ciudadanoapellidos:
-          type: string
-          description: Apellidos del ciudadano
-          example: "Pérez Gómez"
-        ciudadanocedula:
-          type: string
-          description: Cédula del ciudadano
-          example: "123-4567890-1"
-        empleadonombres:
-          type: string
-          description: Nombres del empleado asignado
-          example: "María Elena"
-        empleadoapellidos:
-          type: string
-          description: Apellidos del empleado asignado
-          example: "Sánchez Rodríguez"
-        proveedor:
-          type: string
-          description: Proveedor del seguro (si aplica)
-          example: "Seguros Atlantica"
-        numeropoliza:
-          type: string
-          description: Número de póliza del seguro (si aplica)
-          example: "PL98765432"
-    
-    Notificacion:
-      type: object
-      properties:
-        idnotificacion:
-          type: integer
-          description: ID de la notificación
-          example: 1
-        mensaje:
-          type: string
-          description: Contenido del mensaje de la notificación
-          example: "Su solicitud para el vehículo con chasis 5YJSA1E27KF302623 ha sido aprobada."
-        titulo:
-          type: string
-          description: Título de la notificación
-          example: "Solicitud Aprobada"
-        estado:
-          type: string
-          description: Estado de la notificación
-          enum: [Pendiente, Enviada, Leida, Confirmada, Cancelada, Error]
-          example: "Enviada"
-        fechacreacion:
-          type: string
-          format: date
-          description: Fecha de creación de la notificación
-          example: "2023-05-20"
-        idusuario:
-          type: integer
-          description: ID del usuario destinatario
-          example: 7
+        solicitud:
+          type: object
+          properties:
+            idSolicitud:
+              type: integer
+              example: 1
+              description: "ID único de la solicitud"
+            fechaRegistro:
+              type: string
+              format: date
+              description: Fecha de creación de la solicitud
+              example: "2023-05-15"
+            fechaProcesada:
+              type: string
+              format: date-time
+              description: Fecha y hora en que se procesó la solicitud
+              example: "2023-05-20T14:35:42.000Z"
+            estadoDecision:
+              type: string
+              description: Estado de la solicitud
+              enum: [Pendiente, Aprobada, Rechazada]
+              example: "Pendiente"
+            motivoRechazo:
+              type: string
+              description: Motivo de rechazo (si aplica)
+              example: "Documentación incompleta"
+            notaRevision:
+              type: string
+              description: Notas de revisión (si aplica)
+              example: "Todos los documentos están en orden"
+            detalleRechazo:
+              type: string
+              description: Detalles del motivo de rechazo (si aplica)
+              example: "La licencia de conducir está vencida"
+            documentos:
+              type: object
+              properties:
+                cedula:
+                  type: string
+                  description: URL del documento de cédula
+                  example: "https://storage.url/cedulas/12345678.pdf"
+                licencia:
+                  type: string
+                  description: URL del documento de licencia
+                  example: "https://storage.url/licencias/12345678.pdf"
+                seguro:
+                  type: string
+                  description: URL del documento de seguro (opcional)
+                  example: "https://storage.url/seguros/s12345.pdf"
+                facturaVehiculo:
+                  type: string
+                  description: URL del documento de factura del vehículo
+                  example: "https://storage.url/facturas/f12345.pdf"
+        vehiculo:
+          type: object
+          properties:
+            idVehiculo:
+              type: integer
+              description: ID del vehículo asociado
+              example: 20
+            chasis:
+              type: string
+              description: Número de chasis del vehículo
+              example: "5YJSA1E27KF302623"
+            tipoUso:
+              type: string
+              description: Tipo de uso del vehículo
+              example: "Personal"
+            modelo:
+              type: object
+              properties:
+                idModelo:
+                  type: integer
+                  description: ID del modelo del vehículo
+                  example: 1
+                nombre:
+                  type: string
+                  description: Nombre del modelo del vehículo
+                  example: "CBR 150R"
+                año:
+                  type: integer
+                  description: Año del modelo
+                  example: 2022
+                color:
+                  type: string
+                  description: Color del vehículo
+                  example: "Negro"
+                cilindraje:
+                  type: string
+                  description: Cilindraje del vehículo
+                  example: "150cc"
+            marca:
+              type: object
+              properties:
+                idMarca:
+                  type: integer
+                  description: ID de la marca del vehículo
+                  example: 1
+                nombre:
+                  type: string
+                  description: Nombre de la marca del vehículo
+                  example: "Honda"
+            tipoVehiculo:
+              type: object
+              properties:
+                idTipoVehiculo:
+                  type: integer
+                  description: ID del tipo de vehículo
+                  example: 1
+                nombre:
+                  type: string
+                  description: Nombre del tipo de vehículo
+                  example: "Motocicleta"
+                capacidad:
+                  type: integer
+                  description: Capacidad del vehículo
+                  example: 2
+        matricula:
+          type: object
+          properties:
+            idMatricula:
+              type: integer
+              description: ID de la matrícula asociada
+              example: 15
+            matriculaGenerada:
+              type: string
+              description: Número de matrícula generada
+              example: "K123456"
+            estado:
+              type: string
+              description: Estado de la matrícula
+              enum: [Pendiente, Generada, Cancelada, Transferida]
+              example: "Generada"
+            fechaEmision:
+              type: string
+              format: date
+              description: Fecha de emisión de la matrícula
+              example: "2023-05-20"
+        ciudadano:
+          type: object
+          properties:
+            idPersona:
+              type: integer
+              example: 5
+              description: ID del ciudadano que creó la solicitud
+            nombres:
+              type: string
+              description: Nombres del ciudadano
+              example: "Juan Carlos"
+            apellidos:
+              type: string
+              description: Apellidos del ciudadano
+              example: "Pérez Gómez"
+            cedula:
+              type: string
+              description: Cédula del ciudadano
+              example: "123-4567890-1"
+            fechaNacimiento:
+              type: string
+              format: date
+              description: Fecha de nacimiento del ciudadano
+              example: "1985-07-15"
+            estadoCivil:
+              type: string
+              description: Estado civil del ciudadano
+              example: "Casado"
+            sexo:
+              type: string
+              description: Sexo del ciudadano (M/F)
+              example: "M"
+            telefono:
+              type: string
+              description: Teléfono del ciudadano
+              example: "8091234567"
+            correo:
+              type: string
+              description: Correo electrónico del ciudadano
+              example: "juan.perez@ejemplo.com"
+            ubicacion:
+              type: object
+              properties:
+                direccion:
+                  type: string
+                  description: Dirección del ciudadano
+                  example: "Calle Principal #123"
+                municipio:
+                  type: object
+                  properties:
+                    idMunicipio:
+                      type: integer
+                      description: ID del municipio
+                      example: 5
+                    nombre:
+                      type: string
+                      description: Nombre del municipio
+                      example: "Santo Domingo Este"
+                provincia:
+                  type: object
+                  properties:
+                    idProvincia:
+                      type: integer
+                      description: ID de la provincia
+                      example: 1
+                    nombre:
+                      type: string
+                      description: Nombre de la provincia
+                      example: "Santo Domingo"
+        empleado:
+          type: object
+          properties:
+            idPersona:
+              type: integer
+              description: ID del empleado asignado
+              example: 2
+            nombres:
+              type: string
+              description: Nombres del empleado asignado
+              example: "María Elena"
+            apellidos:
+              type: string
+              description: Apellidos del empleado asignado
+              example: "Sánchez Rodríguez"
+            correo:
+              type: string
+              description: Correo electrónico del empleado
+              example: "maria.sanchez@mototrack.com"
+        seguro:
+          type: object
+          description: Información del seguro (solo si está disponible)
+          properties:
+            idSeguro:
+              type: integer
+              description: ID del seguro
+              example: 8
+            proveedor:
+              type: string
+              description: Proveedor del seguro
+              example: "Seguros Atlantica"
+            numeroPoliza:
+              type: string
+              description: Número de póliza del seguro
+              example: "PL98765432"
+            estado:
+              type: string
+              description: Estado del seguro
+              example: "activo"
+        enCola:
+          type: boolean
+          description: Indica si la solicitud está en cola debido a la carga de trabajo del empleado asignado
+          example: false
+
 
     MatriculaBasica:
       type: object
@@ -2160,7 +2244,7 @@ components:
         nombremarca:
           type: string
           example: "Honda"
-
+    
     SolicitudCreateRequest:
       type: object
       required:
@@ -2293,7 +2377,7 @@ components:
           type: string
           format: binary
           description: Archivo de seguro a subir (imagen o PDF). Opcional.
-
+    
     SolicitudResponse:
       type: object
       properties:
@@ -2304,122 +2388,7 @@ components:
           type: string
           example: "Solicitud creada exitosamente"
         data:
-          type: object
-          properties:
-            idpersona:
-              type: integer
-              example: 10
-            idempleado:
-              type: integer
-              example: 5
-            idmatricula:
-              type: integer
-              example: 15
-            idvehiculo:
-              type: integer
-              example: 20
-            idsolicitud:
-              type: integer
-              example: 25
-            doccedula:
-              type: string
-              example: "/uploads/cedulas/12345678.pdf"
-            doclicencia:
-              type: string
-              example: "/uploads/licencias/12345678.pdf"
-            docseguro:
-              type: string
-              example: "/uploads/seguros/s12345.pdf"
-            docfacturavehiculo:
-              type: string
-              example: "/uploads/facturas/f12345.pdf"
-            estadodecision:
-              type: string
-              example: "Pendiente"
-            motivorechazo:
-              type: string
-              example: null
-            notarevision:
-              type: string
-              example: null
-            detallerechazo:
-              type: string
-              example: null
-            fecharegistro:
-              type: string
-              format: date-time
-              example: "2023-05-15T10:30:00.000Z"
-            fechaprocesada:
-              type: string
-              format: date-time
-              example: null
-            chasis:
-              type: string
-              example: "5YJSA1E27KF302623"
-            tipouso:
-              type: string
-              example: "Personal"
-            idmodelo:
-              type: integer
-              example: 1
-            modelonombre:
-              type: string
-              example: "CBR 150R"
-            ano:
-              type: integer
-              example: 2022
-            color:
-              type: string
-              example: "Negro"
-            cilindraje:
-              type: string
-              example: "150cc"
-            marcanombre:
-              type: string
-              example: "Honda"
-            idmarca:
-              type: integer
-              example: 1
-            matriculagenerada:
-              type: string
-              example: null
-            estadomatricula:
-              type: string
-              example: "Pendiente"
-            fechaemisionmatricula:
-              type: string
-              format: date-time
-              example: null
-            ciudadanonombres:
-              type: string
-              example: "Juan Carlos"
-            ciudadanoapellidos:
-              type: string
-              example: "Pérez Gómez"
-            ciudadanocedula:
-              type: string
-              example: "40212345678"
-            ciudadanotelefono:
-              type: string
-              example: "8091234567"
-            ciudadanocorreo:
-              type: string
-              example: "juanperez@ejemplo.com"
-            empleadonombres:
-              type: string
-              example: null
-            empleadoapellidos:
-              type: string
-              example: null
-            numeropoliza:
-              type: string
-              example: "PL98765432"
-            idseguro:
-              type: integer
-              example: 5
-            encola:
-              type: boolean
-              example: false
+          $ref: '#/components/schemas/Solicitud'
 
 
 paths:
@@ -2542,6 +2511,11 @@ paths:
       security:
         - BearerAuth: []
       parameters:
+        - name: id
+          in: query
+          description: Filtrar por ID
+          schema:
+            type: integer
         - name: nombres
           in: query
           description: Filtrar por nombres
@@ -3914,6 +3888,11 @@ paths:
       security:
         - BearerAuth: []
       parameters:
+        - name: id
+          in: query
+          description: Filtrar por ID
+          schema:
+            type: integer
         - name: nombres
           in: query
           description: Filtrar por nombres
@@ -5321,6 +5300,11 @@ paths:
       security:
         - BearerAuth: []
       parameters:
+        - name: id
+          in: query
+          description: Filtrar por ID
+          schema:
+            type: integer
         - name: nombres
           in: query
           description: Filtrar por nombres
@@ -5412,6 +5396,13 @@ paths:
             type: string
             enum: [Pendiente, Aprobada, Rechazada]
             example: "Pendiente"
+        - name: idSolicitud
+          in: query
+          required: false
+          description: Filtrar por ID de solicitud específica
+          schema:
+            type: integer
+            example: 5
       responses:
         '200':
           description: Lista de solicitudes obtenida correctamente
@@ -5485,6 +5476,13 @@ paths:
             type: string
             format: date
             example: "2023-12-31"
+        - name: idSolicitud
+          in: query
+          required: false
+          description: Filtrar por ID de solicitud específica
+          schema:
+            type: integer
+            example: 5
       responses:
         '200':
           description: Solicitudes obtenidas correctamente
@@ -5532,30 +5530,30 @@ paths:
             schema:
               type: object
               required:
-                - idVehiculo
+                - idSolicitud
                 - estadoDecision
               properties:
-                idVehiculo:
+                idSolicitud:
                   type: integer
-                  description: ID del vehículo asociado a la solicitud (se usa como identificador de la solicitud)
                   example: 1
+                  description: ID de la solicitud a procesar
                 estadoDecision:
                   type: string
-                  description: Decisión sobre la solicitud
                   enum: [Aprobada, Rechazada]
                   example: "Aprobada"
+                  description: Decisión sobre la solicitud
                 notaRevision:
                   type: string
-                  description: Nota o comentario de revisión (obligatorio si se aprueba)
                   example: "Todos los documentos están en orden"
+                  description: Nota de revisión (requerida para aprobación)
                 motivoRechazo:
                   type: string
-                  description: Motivo principal del rechazo (obligatorio si se rechaza)
                   example: "Documentación incompleta"
+                  description: Motivo de rechazo (requerido para rechazo)
                 detalleRechazo:
                   type: string
-                  description: Detalle del motivo de rechazo (obligatorio si se rechaza)
-                  example: "La licencia de conducir está vencida"
+                  example: "Falta el documento de licencia de conducir válido"
+                  description: Detalle del motivo de rechazo (requerido para rechazo)
       responses:
         '200':
           description: Solicitud procesada exitosamente
@@ -5634,7 +5632,7 @@ paths:
           description: Filtrar por ID del empleado asignado
           schema:
             type: integer
-            example: 5
+            example: 2
         - name: fechaDesde
           in: query
           required: false
@@ -5654,7 +5652,7 @@ paths:
         - name: page
           in: query
           required: false
-          description: Número de página para paginación
+          description: Número de página (paginación)
           schema:
             type: integer
             default: 1
@@ -5662,11 +5660,18 @@ paths:
         - name: limit
           in: query
           required: false
-          description: Número de elementos por página
+          description: Elementos por página (paginación)
           schema:
             type: integer
             default: 10
             example: 10
+        - name: idSolicitud
+          in: query
+          required: false
+          description: Filtrar por ID de solicitud específica
+          schema:
+            type: integer
+            example: 5
       responses:
         '200':
           description: Solicitudes obtenidas correctamente
@@ -5681,11 +5686,11 @@ paths:
                   totalItems:
                     type: integer
                     description: Número total de solicitudes que coinciden con el filtro
-                    example: 25
+                    example: 50
                   totalPages:
                     type: integer
                     description: Número total de páginas
-                    example: 3
+                    example: 5
                   currentPage:
                     type: integer
                     description: Página actual
@@ -5706,7 +5711,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
+                
   /solicitud/asignar:
     put:
       tags:
@@ -5722,17 +5727,17 @@ paths:
             schema:
               type: object
               required:
-                - idVehiculo
+                - idSolicitud
                 - idEmpleado
               properties:
-                idVehiculo:
+                idSolicitud:
                   type: integer
-                  description: ID del vehículo asociado a la solicitud (se usa como identificador de la solicitud)
                   example: 1
+                  description: ID de la solicitud a asignar
                 idEmpleado:
                   type: integer
+                  example: 2
                   description: ID del empleado al que se asignará la solicitud
-                  example: 5
       responses:
         '200':
           description: Solicitud asignada exitosamente
@@ -5782,6 +5787,12 @@ paths:
       description: Obtiene todas las matrículas con información del vehículo, propietario, modelo y marca (solo para empleados y administradores)
       security:
         - BearerAuth: []
+      parameters:
+        - name: id
+          in: query
+          description: Filtrar por ID
+          schema:
+            type: integer
       responses:
         '200':
           description: Matrículas obtenidas exitosamente
@@ -5825,6 +5836,12 @@ paths:
         - Matrículas
       summary: Obtener matrículas activas
       description: Obtiene todas las matrículas con estado 'Generada'
+      parameters:
+        - name: id
+          in: query
+          description: Filtrar por ID
+          schema:
+            type: integer
       responses:
         '200':
           description: Matrículas obtenidas exitosamente
@@ -5845,6 +5862,48 @@ paths:
                       $ref: '#/components/schemas/MatriculaBasica'
         '500':
           description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Add the new solicitud/:id route
+  /solicitud/{id}:
+    get:
+      tags:
+      - Solicitudes
+      summary: Obtener una solicitud específica por ID
+      description: Permite obtener los detalles de una solicitud específica usando su ID único
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: ID único de la solicitud
+      responses:
+        '200':
+          description: Solicitud obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Solicitud'
+        '404':
+          description: Solicitud no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: No tiene permisos para ver esta solicitud
           content:
             application/json:
               schema:

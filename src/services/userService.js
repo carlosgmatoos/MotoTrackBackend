@@ -647,6 +647,13 @@ const getAdminAndEmployeeUsers = async (filters = {}) => {
     const queryParams = [];
     let paramCounter = 1;
     
+    // Aplicar filtro de ID si existe
+    if (filters.id) {
+      query += ` AND u.idUsuario = $${paramCounter}`;
+      queryParams.push(filters.id);
+      paramCounter++;
+    }
+    
     // Aplicar filtro de estado si existe
     if (filters.estado) {
       query += ` AND u.estado = $${paramCounter}`;

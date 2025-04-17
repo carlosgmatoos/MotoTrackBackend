@@ -518,10 +518,11 @@ const getProfileFromToken = async (req, res) => {
 const getAdminAndEmployeeUsers = async (req, res) => {
   try {
     // Extraer filtros de la consulta
-    const { nombres, apellidos, cedula, cargo, estado } = req.query;
+    const { id, nombres, apellidos, cedula, cargo, estado } = req.query;
     
     // Construir objeto de filtros
     const filters = {};
+    if (id) filters.id = parseInt(id, 10);
     if (nombres) filters.nombres = nombres;
     if (apellidos) filters.apellidos = apellidos;
     if (cedula) filters.cedula = cedula;

@@ -425,7 +425,7 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
        (idPersona, idEmpleado, idMatricula, idVehiculo, docCedula, docLicencia, docSeguro, docFacturaVehiculo, 
        estadoDecision, motivoRechazo, notaRevision, detalleRechazo, fechaRegistro, fechaProcesada)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULL, NULL, NULL, CURRENT_DATE, NULL)
-       RETURNING *`,
+       RETURNING idSolicitud`,
       [
         idCiudadano,
         idEmpleado,
@@ -475,12 +475,12 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
       client.release();
       
       // Devolver la solicitud creada con todos los datos
-      const solicitudCompleta = await obtenerSolicitudPorId(idVehiculo);
+      const solicitudCompleta = await obtenerSolicitudPorId(solicitudResult.rows[0].idsolicitud);
       
       if (!solicitudCompleta) {
         console.log('No se pudo obtener la solicitud completa en el primer intento, reintentando...');
         await new Promise(resolve => setTimeout(resolve, 500));
-        const reintentoSolicitud = await obtenerSolicitudPorId(idVehiculo);
+        const reintentoSolicitud = await obtenerSolicitudPorId(solicitudResult.rows[0].idsolicitud);
         
         if (!reintentoSolicitud) {
           console.log('No se pudo obtener la solicitud completa después de reintentar');
@@ -571,27 +571,135 @@ const obtenerSolicitudesPorCiudadano = async (idPersona, idUsuario = null, estad
       queryParams.push(estado);
     }
     
-    // Buscar solicitudes para esta persona específica
+    // Buscar solicitudes para esta persona específica con todos los datos relacionados
     const result = await client.query(
       `SELECT s.*, 
-        v.chasis, v.tipoUso,
+        v.chasis, v.tipoUso, v.idTipoVehiculo,
         m.idModelo, m.nombre as modeloNombre, m.año, m.color, m.cilindraje,
-        ma.nombre as marcaNombre,
-        mat.matriculaGenerada, mat.estado as estadoMatricula, mat.fechaEmisionMatricula,
-        e.nombres as empleadoNombres, e.apellidos as empleadoApellidos
+        ma.idMarca, ma.nombre as marcaNombre,
+        c.idPersona as ciudadanoId, c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos, 
+        c.cedula as ciudadanoCedula, c.fechaNacimiento as ciudadanoFechaNacimiento, 
+        c.estadoCivil as ciudadanoEstadoCivil, c.sexo as ciudadanoSexo, 
+        c.telefono as ciudadanoTelefono, c.idUbicacion as ciudadanoIdUbicacion,
+        mat.idMatricula, mat.matriculaGenerada, mat.estado as estadoMatricula, mat.fechaEmisionMatricula,
+        e.idPersona as empleadoId, e.nombres as empleadoNombres, e.apellidos as empleadoApellidos,
+        tv.nombre as tipoVehiculoNombre, tv.capacidad as tipoVehiculoCapacidad,
+        seg.idSeguro, seg.proveedor as seguroProveedor, seg.numeroPoliza as seguroNumeroPoliza, seg.estado as seguroEstado,
+        u.direccion as ciudadanoDireccion,
+        mun.idMunicipio, mun.nombreMunicipio,
+        prov.idProvincia, prov.nombreProvincia,
+        uc.correo as ciudadanoCorreo,
+        ue.correo as empleadoCorreo
       FROM Solicitud s
       JOIN Vehiculo v ON s.idVehiculo = v.idVehiculo
       JOIN Modelo m ON v.idModelo = m.idModelo
       JOIN Marca ma ON m.idMarca = ma.idMarca
+      JOIN Persona c ON s.idPersona = c.idPersona
       JOIN Matricula mat ON s.idMatricula = mat.idMatricula
+      JOIN TipoVehiculo tv ON v.idTipoVehiculo = tv.idTipoVehiculo
+      LEFT JOIN Seguro seg ON v.idSeguro = seg.idSeguro
       LEFT JOIN Persona e ON s.idEmpleado = e.idPersona
+      LEFT JOIN Ubicacion u ON c.idUbicacion = u.idUbicacion
+      LEFT JOIN Municipio mun ON u.idMunicipio = mun.idMunicipio
+      LEFT JOIN Provincia prov ON mun.idProvincia = prov.idProvincia
+      LEFT JOIN Usuario uc ON c.idUsuario = uc.idUsuario
+      LEFT JOIN Usuario ue ON e.idUsuario = ue.idUsuario
       WHERE ${whereClause}
       ORDER BY s.fechaRegistro DESC`,
       queryParams
     );
     
     console.log(`Se encontraron ${result.rows.length} solicitudes para la persona ID ${idPersona}`);
-    return result.rows;
+    
+    // Transformar la respuesta para tener el mismo formato estructurado que obtenerSolicitudPorId
+    const solicitudes = result.rows.map(solicitud => {
+      const respuesta = {
+        solicitud: {
+          idSolicitud: solicitud.idsolicitud,
+          fechaRegistro: solicitud.fecharegistro,
+          fechaProcesada: solicitud.fechaprocesada,
+          estadoDecision: solicitud.estadodecision,
+          motivoRechazo: solicitud.motivorechazo,
+          notaRevision: solicitud.notarevision,
+          detalleRechazo: solicitud.detallerechazo,
+          documentos: {
+            cedula: solicitud.doccedula,
+            licencia: solicitud.doclicencia,
+            seguro: solicitud.docseguro,
+            facturaVehiculo: solicitud.docfacturavehiculo
+          }
+        },
+        vehiculo: {
+          idVehiculo: solicitud.idvehiculo,
+          chasis: solicitud.chasis,
+          tipoUso: solicitud.tipouso,
+          modelo: {
+            idModelo: solicitud.idmodelo,
+            nombre: solicitud.modelonombre,
+            año: solicitud.año,
+            color: solicitud.color,
+            cilindraje: solicitud.cilindraje
+          },
+          marca: {
+            idMarca: solicitud.idmarca,
+            nombre: solicitud.marcanombre
+          },
+          tipoVehiculo: {
+            idTipoVehiculo: solicitud.idtipovehiculo,
+            nombre: solicitud.tipovehiculonombre,
+            capacidad: solicitud.tipovehiculocapacidad
+          }
+        },
+        matricula: {
+          idMatricula: solicitud.idmatricula,
+          matriculaGenerada: solicitud.matriculagenerada,
+          estado: solicitud.estadomatricula,
+          fechaEmision: solicitud.fechaemisionmatricula
+        },
+        ciudadano: {
+          idPersona: solicitud.ciudadanoid,
+          nombres: solicitud.ciudadanonombres,
+          apellidos: solicitud.ciudadanoapellidos,
+          cedula: solicitud.ciudadanocedula,
+          fechaNacimiento: solicitud.ciudadanofechanacimiento,
+          estadoCivil: solicitud.ciudadanoestadocivil,
+          sexo: solicitud.ciudadanosexo,
+          telefono: solicitud.ciudadanotelefono,
+          correo: solicitud.ciudadanocorreo,
+          ubicacion: solicitud.ciudadanoidubicacion ? {
+            direccion: solicitud.ciudadanodireccion,
+            municipio: {
+              idMunicipio: solicitud.idmunicipio,
+              nombre: solicitud.nombremunicipio
+            },
+            provincia: {
+              idProvincia: solicitud.idprovincia,
+              nombre: solicitud.nombreprovincia
+            }
+          } : null
+        },
+        empleado: solicitud.empleadoid ? {
+          idPersona: solicitud.empleadoid,
+          nombres: solicitud.empleadonombres,
+          apellidos: solicitud.empleadoapellidos,
+          correo: solicitud.empleadocorreo
+        } : null
+      };
+      
+      // Add insurance information only if it exists
+      if (solicitud.idseguro) {
+        respuesta.seguro = {
+          idSeguro: solicitud.idseguro,
+          proveedor: solicitud.seguroproveedor,
+          numeroPoliza: solicitud.seguronumeropoliza,
+          estado: solicitud.seguroestado
+        };
+      }
+      
+      return respuesta;
+    });
+    
+    return solicitudes;
   } catch (error) {
     console.error('Error al obtener solicitudes por ciudadano:', error);
     throw error;
@@ -603,34 +711,138 @@ const obtenerSolicitudesPorCiudadano = async (idPersona, idUsuario = null, estad
 /**
  * Obtener una solicitud específica por ID
  */
-const obtenerSolicitudPorId = async (idVehiculo) => {
+const obtenerSolicitudPorId = async (idSolicitud) => {
   try {
     const result = await pool.query(
       `SELECT s.*, 
-        v.chasis, v.tipoUso,
+        v.chasis, v.tipoUso, v.idTipoVehiculo,
         m.idModelo, m.nombre as modeloNombre, m.año, m.color, m.cilindraje,
-        ma.nombre as marcaNombre,
-        c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos, c.cedula as ciudadanoCedula,
-        c.telefono as ciudadanoTelefono,
-        mat.matriculaGenerada, mat.estado as estadoMatricula, mat.fechaEmisionMatricula,
-        e.nombres as empleadoNombres, e.apellidos as empleadoApellidos
+        ma.idMarca, ma.nombre as marcaNombre,
+        c.idPersona as ciudadanoId, c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos, 
+        c.cedula as ciudadanoCedula, c.fechaNacimiento as ciudadanoFechaNacimiento, 
+        c.estadoCivil as ciudadanoEstadoCivil, c.sexo as ciudadanoSexo, 
+        c.telefono as ciudadanoTelefono, c.idUbicacion as ciudadanoIdUbicacion,
+        mat.idMatricula, mat.matriculaGenerada, mat.estado as estadoMatricula, mat.fechaEmisionMatricula,
+        e.idPersona as empleadoId, e.nombres as empleadoNombres, e.apellidos as empleadoApellidos,
+        tv.nombre as tipoVehiculoNombre, tv.capacidad as tipoVehiculoCapacidad,
+        seg.idSeguro, seg.proveedor as seguroProveedor, seg.numeroPoliza as seguroNumeroPoliza, seg.estado as seguroEstado,
+        u.direccion as ciudadanoDireccion,
+        mun.idMunicipio, mun.nombreMunicipio,
+        prov.idProvincia, prov.nombreProvincia,
+        uc.correo as ciudadanoCorreo,
+        ue.correo as empleadoCorreo
       FROM Solicitud s
       JOIN Vehiculo v ON s.idVehiculo = v.idVehiculo
       JOIN Modelo m ON v.idModelo = m.idModelo
       JOIN Marca ma ON m.idMarca = ma.idMarca
       JOIN Persona c ON s.idPersona = c.idPersona
       JOIN Matricula mat ON s.idMatricula = mat.idMatricula
+      JOIN TipoVehiculo tv ON v.idTipoVehiculo = tv.idTipoVehiculo
+      LEFT JOIN Seguro seg ON v.idSeguro = seg.idSeguro
       LEFT JOIN Persona e ON s.idEmpleado = e.idPersona
-      WHERE s.idVehiculo = $1`,
-      [idVehiculo]
+      LEFT JOIN Ubicacion u ON c.idUbicacion = u.idUbicacion
+      LEFT JOIN Municipio mun ON u.idMunicipio = mun.idMunicipio
+      LEFT JOIN Provincia prov ON mun.idProvincia = prov.idProvincia
+      LEFT JOIN Usuario uc ON c.idUsuario = uc.idUsuario
+      LEFT JOIN Usuario ue ON e.idUsuario = ue.idUsuario
+      WHERE s.idSolicitud = $1`,
+      [idSolicitud]
     );
     
     if (result.rows.length === 0) {
       return null;
     }
     
-    return result.rows[0];
+    // Format the response to be more structured and organized
+    const solicitud = result.rows[0];
+    
+    // Create a structured response with all the data
+    const respuesta = {
+      solicitud: {
+        idSolicitud: solicitud.idsolicitud,
+        fechaRegistro: solicitud.fecharegistro,
+        fechaProcesada: solicitud.fechaprocesada,
+        estadoDecision: solicitud.estadodecision,
+        motivoRechazo: solicitud.motivorechazo,
+        notaRevision: solicitud.notarevision,
+        detalleRechazo: solicitud.detallerechazo,
+        documentos: {
+          cedula: solicitud.doccedula,
+          licencia: solicitud.doclicencia,
+          seguro: solicitud.docseguro,
+          facturaVehiculo: solicitud.docfacturavehiculo
+        }
+      },
+      vehiculo: {
+        idVehiculo: solicitud.idvehiculo,
+        chasis: solicitud.chasis,
+        tipoUso: solicitud.tipouso,
+        modelo: {
+          idModelo: solicitud.idmodelo,
+          nombre: solicitud.modelonombre,
+          año: solicitud.año,
+          color: solicitud.color,
+          cilindraje: solicitud.cilindraje
+        },
+        marca: {
+          idMarca: solicitud.idmarca,
+          nombre: solicitud.marcanombre
+        },
+        tipoVehiculo: {
+          idTipoVehiculo: solicitud.idtipovehiculo,
+          nombre: solicitud.tipovehiculonombre,
+          capacidad: solicitud.tipovehiculocapacidad
+        }
+      },
+      matricula: {
+        idMatricula: solicitud.idmatricula,
+        matriculaGenerada: solicitud.matriculagenerada,
+        estado: solicitud.estadomatricula,
+        fechaEmision: solicitud.fechaemisionmatricula
+      },
+      ciudadano: {
+        idPersona: solicitud.ciudadanoid,
+        nombres: solicitud.ciudadanonombres,
+        apellidos: solicitud.ciudadanoapellidos,
+        cedula: solicitud.ciudadanocedula,
+        fechaNacimiento: solicitud.ciudadanofechanacimiento,
+        estadoCivil: solicitud.ciudadanoestadocivil,
+        sexo: solicitud.ciudadanosexo,
+        telefono: solicitud.ciudadanotelefono,
+        correo: solicitud.ciudadanocorreo,
+        ubicacion: solicitud.ciudadanoidubicacion ? {
+          direccion: solicitud.ciudadanodireccion,
+          municipio: {
+            idMunicipio: solicitud.idmunicipio,
+            nombre: solicitud.nombremunicipio
+          },
+          provincia: {
+            idProvincia: solicitud.idprovincia,
+            nombre: solicitud.nombreprovincia
+          }
+        } : null
+      },
+      empleado: solicitud.empleadoid ? {
+        idPersona: solicitud.empleadoid,
+        nombres: solicitud.empleadonombres,
+        apellidos: solicitud.empleadoapellidos,
+        correo: solicitud.empleadocorreo
+      } : null
+    };
+    
+    // Add insurance information only if it exists
+    if (solicitud.idseguro) {
+      respuesta.seguro = {
+        idSeguro: solicitud.idseguro,
+        proveedor: solicitud.seguroproveedor,
+        numeroPoliza: solicitud.seguronumeropoliza,
+        estado: solicitud.seguroestado
+      };
+    }
+    
+    return respuesta;
   } catch (error) {
+    console.error('Error al obtener solicitud por ID:', error);
     throw error;
   }
 };
@@ -642,17 +854,36 @@ const obtenerSolicitudesPorEmpleado = async (idEmpleado) => {
   try {
     const result = await pool.query(
       `SELECT s.*, 
-        v.chasis, v.tipoUso,
+        v.chasis, v.tipoUso, v.idTipoVehiculo,
         m.idModelo, m.nombre as modeloNombre, m.año, m.color, m.cilindraje,
-        ma.nombre as marcaNombre,
-        mat.matriculaGenerada, mat.estado as estadoMatricula, mat.fechaEmisionMatricula,
-        c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos
+        ma.idMarca, ma.nombre as marcaNombre,
+        c.idPersona as ciudadanoId, c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos, 
+        c.cedula as ciudadanoCedula, c.fechaNacimiento as ciudadanoFechaNacimiento, 
+        c.estadoCivil as ciudadanoEstadoCivil, c.sexo as ciudadanoSexo, 
+        c.telefono as ciudadanoTelefono, c.idUbicacion as ciudadanoIdUbicacion,
+        mat.idMatricula, mat.matriculaGenerada, mat.estado as estadoMatricula, mat.fechaEmisionMatricula,
+        e.idPersona as empleadoId, e.nombres as empleadoNombres, e.apellidos as empleadoApellidos,
+        tv.nombre as tipoVehiculoNombre, tv.capacidad as tipoVehiculoCapacidad,
+        seg.idSeguro, seg.proveedor as seguroProveedor, seg.numeroPoliza as seguroNumeroPoliza, seg.estado as seguroEstado,
+        u.direccion as ciudadanoDireccion,
+        mun.idMunicipio, mun.nombreMunicipio,
+        prov.idProvincia, prov.nombreProvincia,
+        uc.correo as ciudadanoCorreo,
+        ue.correo as empleadoCorreo
       FROM Solicitud s
       JOIN Vehiculo v ON s.idVehiculo = v.idVehiculo
       JOIN Modelo m ON v.idModelo = m.idModelo
       JOIN Marca ma ON m.idMarca = ma.idMarca
-      JOIN Matricula mat ON s.idMatricula = mat.idMatricula
       JOIN Persona c ON s.idPersona = c.idPersona
+      JOIN Matricula mat ON s.idMatricula = mat.idMatricula
+      JOIN TipoVehiculo tv ON v.idTipoVehiculo = tv.idTipoVehiculo
+      LEFT JOIN Seguro seg ON v.idSeguro = seg.idSeguro
+      LEFT JOIN Persona e ON s.idEmpleado = e.idPersona
+      LEFT JOIN Ubicacion u ON c.idUbicacion = u.idUbicacion
+      LEFT JOIN Municipio mun ON u.idMunicipio = mun.idMunicipio
+      LEFT JOIN Provincia prov ON mun.idProvincia = prov.idProvincia
+      LEFT JOIN Usuario uc ON c.idUsuario = uc.idUsuario
+      LEFT JOIN Usuario ue ON e.idUsuario = ue.idUsuario
       WHERE s.idEmpleado = $1
       ORDER BY 
         CASE WHEN s.estadoDecision = 'Pendiente' THEN 0 ELSE 1 END,
@@ -660,7 +891,95 @@ const obtenerSolicitudesPorEmpleado = async (idEmpleado) => {
       [idEmpleado]
     );
     
-    return result.rows;
+    // Transformar la respuesta para tener el mismo formato estructurado que obtenerSolicitudPorId
+    const solicitudes = result.rows.map(solicitud => {
+      const respuesta = {
+        solicitud: {
+          idSolicitud: solicitud.idsolicitud,
+          fechaRegistro: solicitud.fecharegistro,
+          fechaProcesada: solicitud.fechaprocesada,
+          estadoDecision: solicitud.estadodecision,
+          motivoRechazo: solicitud.motivorechazo,
+          notaRevision: solicitud.notarevision,
+          detalleRechazo: solicitud.detallerechazo,
+          documentos: {
+            cedula: solicitud.doccedula,
+            licencia: solicitud.doclicencia,
+            seguro: solicitud.docseguro,
+            facturaVehiculo: solicitud.docfacturavehiculo
+          }
+        },
+        vehiculo: {
+          idVehiculo: solicitud.idvehiculo,
+          chasis: solicitud.chasis,
+          tipoUso: solicitud.tipouso,
+          modelo: {
+            idModelo: solicitud.idmodelo,
+            nombre: solicitud.modelonombre,
+            año: solicitud.año,
+            color: solicitud.color,
+            cilindraje: solicitud.cilindraje
+          },
+          marca: {
+            idMarca: solicitud.idmarca,
+            nombre: solicitud.marcanombre
+          },
+          tipoVehiculo: {
+            idTipoVehiculo: solicitud.idtipovehiculo,
+            nombre: solicitud.tipovehiculonombre,
+            capacidad: solicitud.tipovehiculocapacidad
+          }
+        },
+        matricula: {
+          idMatricula: solicitud.idmatricula,
+          matriculaGenerada: solicitud.matriculagenerada,
+          estado: solicitud.estadomatricula,
+          fechaEmision: solicitud.fechaemisionmatricula
+        },
+        ciudadano: {
+          idPersona: solicitud.ciudadanoid,
+          nombres: solicitud.ciudadanonombres,
+          apellidos: solicitud.ciudadanoapellidos,
+          cedula: solicitud.ciudadanocedula,
+          fechaNacimiento: solicitud.ciudadanofechanacimiento,
+          estadoCivil: solicitud.ciudadanoestadocivil,
+          sexo: solicitud.ciudadanosexo,
+          telefono: solicitud.ciudadanotelefono,
+          correo: solicitud.ciudadanocorreo,
+          ubicacion: solicitud.ciudadanoidubicacion ? {
+            direccion: solicitud.ciudadanodireccion,
+            municipio: {
+              idMunicipio: solicitud.idmunicipio,
+              nombre: solicitud.nombremunicipio
+            },
+            provincia: {
+              idProvincia: solicitud.idprovincia,
+              nombre: solicitud.nombreprovincia
+            }
+          } : null
+        },
+        empleado: solicitud.empleadoid ? {
+          idPersona: solicitud.empleadoid,
+          nombres: solicitud.empleadonombres,
+          apellidos: solicitud.empleadoapellidos,
+          correo: solicitud.empleadocorreo
+        } : null
+      };
+      
+      // Add insurance information only if it exists
+      if (solicitud.idseguro) {
+        respuesta.seguro = {
+          idSeguro: solicitud.idseguro,
+          proveedor: solicitud.seguroproveedor,
+          numeroPoliza: solicitud.seguronumeropoliza,
+          estado: solicitud.seguroestado
+        };
+      }
+      
+      return respuesta;
+    });
+    
+    return solicitudes;
   } catch (error) {
     throw error;
   }
@@ -728,22 +1047,39 @@ const obtenerTodasSolicitudes = async (filtros = {}, paginacion = { page: 1, lim
     // Calcular offset
     const offset = (paginacion.page - 1) * paginacion.limit;
     
-    // Consulta paginada
+    // Consulta paginada con todos los datos relacionados
     const query = `
       SELECT s.*, 
-        v.chasis, v.tipoUso,
+        v.chasis, v.tipoUso, v.idTipoVehiculo,
         m.idModelo, m.nombre as modeloNombre, m.año, m.color, m.cilindraje,
-        ma.nombre as marcaNombre,
-        mat.matriculaGenerada, mat.estado as estadoMatricula, mat.fechaEmisionMatricula,
-        c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos,
-        e.nombres as empleadoNombres, e.apellidos as empleadoApellidos
+        ma.idMarca, ma.nombre as marcaNombre,
+        c.idPersona as ciudadanoId, c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos, 
+        c.cedula as ciudadanoCedula, c.fechaNacimiento as ciudadanoFechaNacimiento, 
+        c.estadoCivil as ciudadanoEstadoCivil, c.sexo as ciudadanoSexo, 
+        c.telefono as ciudadanoTelefono, c.idUbicacion as ciudadanoIdUbicacion,
+        mat.idMatricula, mat.matriculaGenerada, mat.estado as estadoMatricula, mat.fechaEmisionMatricula,
+        e.idPersona as empleadoId, e.nombres as empleadoNombres, e.apellidos as empleadoApellidos,
+        tv.nombre as tipoVehiculoNombre, tv.capacidad as tipoVehiculoCapacidad,
+        seg.idSeguro, seg.proveedor as seguroProveedor, seg.numeroPoliza as seguroNumeroPoliza, seg.estado as seguroEstado,
+        u.direccion as ciudadanoDireccion,
+        mun.idMunicipio, mun.nombreMunicipio,
+        prov.idProvincia, prov.nombreProvincia,
+        uc.correo as ciudadanoCorreo,
+        ue.correo as empleadoCorreo
       FROM Solicitud s
       JOIN Vehiculo v ON s.idVehiculo = v.idVehiculo
       JOIN Modelo m ON v.idModelo = m.idModelo
       JOIN Marca ma ON m.idMarca = ma.idMarca
-      JOIN Matricula mat ON s.idMatricula = mat.idMatricula
       JOIN Persona c ON s.idPersona = c.idPersona
+      JOIN Matricula mat ON s.idMatricula = mat.idMatricula
+      JOIN TipoVehiculo tv ON v.idTipoVehiculo = tv.idTipoVehiculo
+      LEFT JOIN Seguro seg ON v.idSeguro = seg.idSeguro
       LEFT JOIN Persona e ON s.idEmpleado = e.idPersona
+      LEFT JOIN Ubicacion u ON c.idUbicacion = u.idUbicacion
+      LEFT JOIN Municipio mun ON u.idMunicipio = mun.idMunicipio
+      LEFT JOIN Provincia prov ON mun.idProvincia = prov.idProvincia
+      LEFT JOIN Usuario uc ON c.idUsuario = uc.idUsuario
+      LEFT JOIN Usuario ue ON e.idUsuario = ue.idUsuario
       ${whereClause}
       ORDER BY s.fechaRegistro DESC
       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
@@ -753,12 +1089,99 @@ const obtenerTodasSolicitudes = async (filtros = {}, paginacion = { page: 1, lim
     
     const result = await client.query(query, queryParams);
     
+    // Transformar la respuesta para tener el mismo formato estructurado que obtenerSolicitudPorId
+    const solicitudes = result.rows.map(solicitud => {
+      const respuesta = {
+        solicitud: {
+          idSolicitud: solicitud.idsolicitud,
+          fechaRegistro: solicitud.fecharegistro,
+          fechaProcesada: solicitud.fechaprocesada,
+          estadoDecision: solicitud.estadodecision,
+          motivoRechazo: solicitud.motivorechazo,
+          notaRevision: solicitud.notarevision,
+          detalleRechazo: solicitud.detallerechazo,
+          documentos: {
+            cedula: solicitud.doccedula,
+            licencia: solicitud.doclicencia,
+            seguro: solicitud.docseguro,
+            facturaVehiculo: solicitud.docfacturavehiculo
+          }
+        },
+        vehiculo: {
+          idVehiculo: solicitud.idvehiculo,
+          chasis: solicitud.chasis,
+          tipoUso: solicitud.tipouso,
+          modelo: {
+            idModelo: solicitud.idmodelo,
+            nombre: solicitud.modelonombre,
+            año: solicitud.año,
+            color: solicitud.color,
+            cilindraje: solicitud.cilindraje
+          },
+          marca: {
+            idMarca: solicitud.idmarca,
+            nombre: solicitud.marcanombre
+          },
+          tipoVehiculo: {
+            idTipoVehiculo: solicitud.idtipovehiculo,
+            nombre: solicitud.tipovehiculonombre,
+            capacidad: solicitud.tipovehiculocapacidad
+          }
+        },
+        matricula: {
+          idMatricula: solicitud.idmatricula,
+          matriculaGenerada: solicitud.matriculagenerada,
+          estado: solicitud.estadomatricula,
+          fechaEmision: solicitud.fechaemisionmatricula
+        },
+        ciudadano: {
+          idPersona: solicitud.ciudadanoid,
+          nombres: solicitud.ciudadanonombres,
+          apellidos: solicitud.ciudadanoapellidos,
+          cedula: solicitud.ciudadanocedula,
+          fechaNacimiento: solicitud.ciudadanofechanacimiento,
+          estadoCivil: solicitud.ciudadanoestadocivil,
+          sexo: solicitud.ciudadanosexo,
+          telefono: solicitud.ciudadanotelefono,
+          correo: solicitud.ciudadanocorreo,
+          ubicacion: solicitud.ciudadanoidubicacion ? {
+            direccion: solicitud.ciudadanodireccion,
+            municipio: {
+              idMunicipio: solicitud.idmunicipio,
+              nombre: solicitud.nombremunicipio
+            },
+            provincia: {
+              idProvincia: solicitud.idprovincia,
+              nombre: solicitud.nombreprovincia
+            }
+          } : null
+        },
+        empleado: solicitud.empleadoid ? {
+          idPersona: solicitud.empleadoid,
+          nombres: solicitud.empleadonombres,
+          apellidos: solicitud.empleadoapellidos,
+          correo: solicitud.empleadocorreo
+        } : null
+      };
+      
+      // Add insurance information only if it exists
+      if (solicitud.idseguro) {
+        respuesta.seguro = {
+          idSeguro: solicitud.idseguro,
+          proveedor: solicitud.seguroproveedor,
+          numeroPoliza: solicitud.seguronumeropoliza,
+          estado: solicitud.seguroestado
+        };
+      }
+      
+      return respuesta;
+    });
+    
     return {
       total,
-      solicitudes: result.rows
+      solicitudes: solicitudes
     };
   } catch (error) {
-    // Error removed
     throw error;
   } finally {
     client.release();
@@ -768,7 +1191,7 @@ const obtenerTodasSolicitudes = async (filtros = {}, paginacion = { page: 1, lim
 /**
  * Asignar una solicitud a un empleado específico
  */
-const asignarSolicitudEmpleado = async (idVehiculo, idEmpleado) => {
+const asignarSolicitudEmpleado = async (idSolicitud, idEmpleado) => {
   const client = await pool.connect();
   
   try {
@@ -806,8 +1229,8 @@ const asignarSolicitudEmpleado = async (idVehiculo, idEmpleado) => {
     
     // Obtener la solicitud actual
     const solicitudResult = await client.query(
-      'SELECT * FROM Solicitud WHERE idVehiculo = $1 AND estadoDecision = $2',
-      [idVehiculo, 'Pendiente']
+      'SELECT * FROM Solicitud WHERE idSolicitud = $1 AND estadoDecision = $2',
+      [idSolicitud, 'Pendiente']
     );
     
     if (solicitudResult.rows.length === 0) {
@@ -816,8 +1239,8 @@ const asignarSolicitudEmpleado = async (idVehiculo, idEmpleado) => {
     
     // Actualizar la solicitud
     await client.query(
-      'UPDATE Solicitud SET idEmpleado = $1 WHERE idVehiculo = $2 AND estadoDecision = $3',
-      [idEmpleado, idVehiculo, 'Pendiente']
+      'UPDATE Solicitud SET idEmpleado = $1 WHERE idSolicitud = $2 AND estadoDecision = $3',
+      [idEmpleado, idSolicitud, 'Pendiente']
     );
     
     // Si con esta nueva solicitud llega a 5, cambiar el estado del empleado a inactivo
@@ -843,7 +1266,7 @@ const asignarSolicitudEmpleado = async (idVehiculo, idEmpleado) => {
     
     try {
       // Devolver la solicitud actualizada
-      const solicitudActualizada = await obtenerSolicitudPorId(idVehiculo);
+      const solicitudActualizada = await obtenerSolicitudPorId(idSolicitud);
       
       // Agregar indicador de si la solicitud está en cola
       if (enCola) {
@@ -853,7 +1276,8 @@ const asignarSolicitudEmpleado = async (idVehiculo, idEmpleado) => {
       return solicitudActualizada;
     } catch (error) {
       return { 
-        idVehiculo: idVehiculo,
+        idSolicitud: idSolicitud,
+        idVehiculo: solicitudResult.rows[0].idvehiculo,
         idEmpleado: idEmpleado,
         enCola: enCola
       };
@@ -869,7 +1293,7 @@ const asignarSolicitudEmpleado = async (idVehiculo, idEmpleado) => {
 /**
  * Procesar una solicitud (aprobar o rechazar)
  */
-const procesarSolicitud = async ({ idVehiculo, idEmpleado, estadoDecision, notaRevision, motivoRechazo, detalleRechazo }) => {
+const procesarSolicitud = async ({ idSolicitud, idEmpleado, estadoDecision, notaRevision, motivoRechazo, detalleRechazo }) => {
   const client = await pool.connect();
   
   try {
@@ -887,12 +1311,12 @@ const procesarSolicitud = async ({ idVehiculo, idEmpleado, estadoDecision, notaR
     
     // Verificar que la solicitud existe y está pendiente
     const solicitudResult = await client.query(
-      'SELECT * FROM Solicitud WHERE idVehiculo = $1 AND estadoDecision = $2',
-      [idVehiculo, 'Pendiente']
+      'SELECT * FROM Solicitud WHERE idSolicitud = $1 AND estadoDecision = $2',
+      [idSolicitud, 'Pendiente']
     );
     
     if (solicitudResult.rows.length === 0) {
-      console.log(`No se encontró una solicitud pendiente con ID ${idVehiculo}`);
+      console.log(`No se encontró una solicitud pendiente con ID ${idSolicitud}`);
       return null; // No existe o no está pendiente
     }
     
@@ -912,7 +1336,7 @@ const procesarSolicitud = async ({ idVehiculo, idEmpleado, estadoDecision, notaR
       const esAdmin = esAdminResult.rows.length > 0 && esAdminResult.rows[0].idtipousuario === 1;
       
       if (!esAdmin) {
-        console.log(`La solicitud ${idVehiculo} no está asignada al empleado ${idEmpleado}`);
+        console.log(`La solicitud ${idSolicitud} no está asignada al empleado ${idEmpleado}`);
         console.log(`Está asignada a: ${solicitud.idempleado}`);
         return null; // No está asignada a este empleado
       } else {
@@ -936,12 +1360,12 @@ const procesarSolicitud = async ({ idVehiculo, idEmpleado, estadoDecision, notaR
         [solicitud.idpersona, 'activo', solicitud.idvehiculo]
       );
       
-      // Actualizar la solicitud - Corregido para evitar restricción en el WHERE
+      // Actualizar la solicitud
       await client.query(
         `UPDATE Solicitud 
          SET estadoDecision = $1, notaRevision = $2, fechaProcesada = CURRENT_TIMESTAMP
-         WHERE idVehiculo = $3`,
-        ['Aprobada', notaRevision, idVehiculo]
+         WHERE idSolicitud = $3`,
+        ['Aprobada', notaRevision, idSolicitud]
       );
       
     } else if (estadoDecision === 'Rechazada') {
@@ -951,12 +1375,12 @@ const procesarSolicitud = async ({ idVehiculo, idEmpleado, estadoDecision, notaR
         ['Cancelada', solicitud.idmatricula]
       );
       
-      // Actualizar la solicitud - Corregido para evitar restricción en el WHERE
+      // Actualizar la solicitud
       await client.query(
         `UPDATE Solicitud 
          SET estadoDecision = $1, motivoRechazo = $2, detalleRechazo = $3, fechaProcesada = CURRENT_TIMESTAMP
-         WHERE idVehiculo = $4`,
-        ['Rechazada', motivoRechazo, detalleRechazo, idVehiculo]
+         WHERE idSolicitud = $4`,
+        ['Rechazada', motivoRechazo, detalleRechazo, idSolicitud]
       );
     }
     
@@ -1006,12 +1430,13 @@ const procesarSolicitud = async ({ idVehiculo, idEmpleado, estadoDecision, notaR
     
     try {
       // Devolver la solicitud actualizada
-      const solicitudActualizada = await obtenerSolicitudPorId(idVehiculo);
-      console.log(`Solicitud ${idVehiculo} procesada exitosamente como ${estadoDecision}`);
+      const solicitudActualizada = await obtenerSolicitudPorId(idSolicitud);
+      console.log(`Solicitud ${idSolicitud} procesada exitosamente como ${estadoDecision}`);
       return solicitudActualizada;
     } catch (error) {
       return {
-        idVehiculo: idVehiculo,
+        idSolicitud: idSolicitud,
+        idVehiculo: solicitud.idvehiculo,
         estadoDecision: estadoDecision,
         mensaje: estadoDecision === 'Aprobada' 
           ? 'Solicitud aprobada exitosamente' 

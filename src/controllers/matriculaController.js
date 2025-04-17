@@ -7,7 +7,8 @@ const personaService = require('../services/personaService');
  */
 const obtenerMatriculasCompletas = async (req, res) => {
   try {
-    const matriculas = await matriculaService.obtenerMatriculasConInformacionRelacionada();
+    const filtros = req.query;
+    const matriculas = await matriculaService.obtenerMatriculasConInformacionRelacionada(filtros);
     
     res.status(200).json({
       success: true,
@@ -107,7 +108,8 @@ const obtenerMatriculasUsuario = async (req, res) => {
  */
 const obtenerMatriculasActivas = async (req, res) => {
   try {
-    const matriculas = await matriculaService.obtenerMatriculasActivas();
+    const filtros = req.query;
+    const matriculas = await matriculaService.obtenerMatriculasActivas(filtros);
     
     res.status(200).json({
       success: true,

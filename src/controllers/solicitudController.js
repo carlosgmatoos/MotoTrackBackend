@@ -253,7 +253,7 @@ const obtenerSolicitudesCiudadano = async (req, res) => {
     const idUsuario = req.user.idUsuario || req.user.id;
     
     // Obtener filtro de estado si existe
-    const { estado } = req.query;
+    const { estado, idSolicitud } = req.query;
     
     if (!idUsuario) {
       return res.status(401).json({
@@ -263,7 +263,7 @@ const obtenerSolicitudesCiudadano = async (req, res) => {
       });
     }
     
-    console.log(`Obteniendo solicitudes para el usuario ID: ${idUsuario}${estado ? `, filtradas por estado: ${estado}` : ''}`);
+    console.log(`Obteniendo solicitudes para el usuario ID: ${idUsuario}${estado ? `, filtradas por estado: ${estado}` : ''}${idSolicitud ? `, filtradas por ID: ${idSolicitud}` : ''}`);
     
     // Obtener ID de la persona asociada al usuario
     let idPersona = req.user.idPersona;
@@ -311,7 +311,37 @@ const obtenerSolicitudesCiudadano = async (req, res) => {
       });
     }
     
-    // Obtener las solicitudes usando el ID de persona
+    // Si se proporciona idSolicitud, obtener esa solicitud específica
+    if (idSolicitud) {
+      const idSolicitudNum = parseInt(idSolicitud, 10);
+      if (isNaN(idSolicitudNum)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Parámetro inválido',
+          message: 'El ID de solicitud debe ser un número válido'
+        });
+      }
+      
+      // Obtener la solicitud específica
+      const solicitud = await solicitudService.obtenerSolicitudPorId(idSolicitudNum);
+      
+      // Verificar que la solicitud pertenece al ciudadano
+      if (solicitud && solicitud.ciudadano && solicitud.ciudadano.idPersona === idPersona) {
+        return res.status(200).json({
+          success: true,
+          count: 1,
+          data: [solicitud] // Devolver como array para mantener consistencia con la API
+        });
+      } else {
+        return res.status(404).json({
+          success: false,
+          error: 'Solicitud no encontrada',
+          message: 'No se encontró la solicitud especificada o no tiene permisos para verla'
+        });
+      }
+    }
+    
+    // Si no hay idSolicitud, obtener todas las solicitudes del ciudadano (con filtro de estado si existe)
     const solicitudes = await solicitudService.obtenerSolicitudesPorCiudadano(idPersona, idUsuario, estado);
     
     console.log(`Se encontraron ${solicitudes.length} solicitudes para la persona ID ${idPersona} (Usuario ID ${idUsuario})`);
@@ -336,20 +366,31 @@ const obtenerSolicitudPorId = async (req, res) => {
     const idUsuario = req.user.idUsuario;
     const tipoUsuario = req.user.tipoUsuario?.nombre?.toLowerCase();
     
-    const solicitud = await solicitudService.obtenerSolicitudPorId(id);
+    // Convertimos el id a number para validar que sea un ID válido
+    const idSolicitud = parseInt(id, 10);
+    
+    if (isNaN(idSolicitud)) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID no válido',
+        message: 'El ID de la solicitud debe ser un número'
+      });
+    }
+    
+    const solicitud = await solicitudService.obtenerSolicitudPorId(idSolicitud);
     
     if (!solicitud) {
       return res.status(404).json({
         success: false,
         error: 'Solicitud no encontrada',
-        message: `No se encontró la solicitud con ID ${id}`
+        message: `No se encontró la solicitud con ID ${idSolicitud}`
       });
     }
     
     // Verificar permisos (solo administrador, empleado asignado o propietario)
     if (tipoUsuario !== 'administrador' && 
-        solicitud.idEmpleado !== req.user.idPersona && 
-        solicitud.idCiudadano !== req.user.idPersona) {
+        solicitud.idempleado !== req.user.idPersona && 
+        solicitud.idpersona !== req.user.idPersona) {
       return res.status(403).json({
         success: false,
         error: 'Permiso denegado',
@@ -396,7 +437,7 @@ const obtenerSolicitudesEmpleado = async (req, res) => {
     }
     
     // Extraer filtros desde los query params
-    const { marca, modelo, estado, fechaDesde, fechaHasta } = req.query;
+    const { marca, modelo, estado, fechaDesde, fechaHasta, idSolicitud } = req.query;
     
     if (!idEmpleado) {
       return res.status(400).json({
@@ -406,7 +447,37 @@ const obtenerSolicitudesEmpleado = async (req, res) => {
       });
     }
     
-    // Construir filtros
+    // Si se proporciona idSolicitud, obtener esa solicitud específica
+    if (idSolicitud) {
+      const idSolicitudNum = parseInt(idSolicitud, 10);
+      if (isNaN(idSolicitudNum)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Parámetro inválido',
+          message: 'El ID de solicitud debe ser un número válido'
+        });
+      }
+      
+      // Obtener la solicitud específica
+      const solicitud = await solicitudService.obtenerSolicitudPorId(idSolicitudNum);
+      
+      // Verificar que la solicitud está asignada al empleado
+      if (solicitud && solicitud.empleado && solicitud.empleado.idPersona === idEmpleado) {
+        return res.status(200).json({
+          success: true,
+          count: 1,
+          data: [solicitud] // Devolver como array para mantener consistencia con la API
+        });
+      } else {
+        return res.status(404).json({
+          success: false,
+          error: 'Solicitud no encontrada',
+          message: 'No se encontró la solicitud especificada o no está asignada a usted'
+        });
+      }
+    }
+    
+    // Construir filtros para buscar todas las solicitudes del empleado
     const filtros = {
       idEmpleado: idEmpleado
     };
@@ -434,14 +505,14 @@ const obtenerSolicitudesEmpleado = async (req, res) => {
  */
 const procesarSolicitud = async (req, res) => {
   try {
-    const { idVehiculo, estadoDecision, notaRevision, motivoRechazo, detalleRechazo } = req.body;
+    const { idSolicitud, estadoDecision, notaRevision, motivoRechazo, detalleRechazo } = req.body;
     
     // Validaciones básicas
-    if (!idVehiculo) {
+    if (!idSolicitud) {
       return res.status(400).json({
         success: false,
         error: 'Datos incompletos',
-        message: 'El ID del vehículo de la solicitud es obligatorio'
+        message: 'El ID de la solicitud es obligatorio'
       });
     }
     
@@ -503,12 +574,12 @@ const procesarSolicitud = async (req, res) => {
     
     // Verificar primero si la solicitud existe
     try {
-      const solicitudPrevia = await solicitudService.obtenerSolicitudPorId(idVehiculo);
+      const solicitudPrevia = await solicitudService.obtenerSolicitudPorId(idSolicitud);
       if (!solicitudPrevia) {
         return res.status(404).json({
           success: false,
           error: 'Solicitud no encontrada',
-          message: `No se encontró la solicitud para el vehículo con ID ${idVehiculo}`
+          message: `No se encontró la solicitud con ID ${idSolicitud}`
         });
       }
     } catch (error) {
@@ -516,7 +587,7 @@ const procesarSolicitud = async (req, res) => {
     }
     
     const solicitudActualizada = await solicitudService.procesarSolicitud({
-      idVehiculo,
+      idSolicitud,
       idEmpleado,
       estadoDecision,
       notaRevision,
@@ -549,8 +620,39 @@ const obtenerTodasSolicitudes = async (req, res) => {
   try {
     const { 
       marca, modelo, estado, idEmpleado, 
-      fechaDesde, fechaHasta, page = 1, limit = 10 
+      fechaDesde, fechaHasta, page = 1, limit = 10, idSolicitud
     } = req.query;
+    
+    // Si se proporciona idSolicitud, obtener esa solicitud específica
+    if (idSolicitud) {
+      const idSolicitudNum = parseInt(idSolicitud, 10);
+      if (isNaN(idSolicitudNum)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Parámetro inválido',
+          message: 'El ID de solicitud debe ser un número válido'
+        });
+      }
+      
+      // Obtener la solicitud específica (administrador puede ver cualquier solicitud)
+      const solicitud = await solicitudService.obtenerSolicitudPorId(idSolicitudNum);
+      
+      if (solicitud) {
+        return res.status(200).json({
+          success: true,
+          totalItems: 1,
+          totalPages: 1,
+          currentPage: 1,
+          data: [solicitud] // Devolver como array para mantener consistencia con la API
+        });
+      } else {
+        return res.status(404).json({
+          success: false,
+          error: 'Solicitud no encontrada',
+          message: 'No se encontró la solicitud especificada'
+        });
+      }
+    }
     
     // Construir filtros
     const filtros = {};
@@ -588,14 +690,14 @@ const obtenerTodasSolicitudes = async (req, res) => {
  */
 const asignarSolicitudEmpleado = async (req, res) => {
   try {
-    const { idVehiculo, idEmpleado } = req.body;
+    const { idSolicitud, idEmpleado } = req.body;
     
     // Validaciones básicas
-    if (!idVehiculo) {
+    if (!idSolicitud) {
       return res.status(400).json({
         success: false,
         error: 'Datos incompletos',
-        message: 'El ID del vehículo de la solicitud es obligatorio'
+        message: 'El ID de la solicitud es obligatorio'
       });
     }
     
@@ -608,7 +710,7 @@ const asignarSolicitudEmpleado = async (req, res) => {
     }
     
     // Asignar la solicitud
-    const solicitudAsignada = await solicitudService.asignarSolicitudEmpleado(idVehiculo, idEmpleado);
+    const solicitudAsignada = await solicitudService.asignarSolicitudEmpleado(idSolicitud, idEmpleado);
     
     if (!solicitudAsignada) {
       return res.status(404).json({

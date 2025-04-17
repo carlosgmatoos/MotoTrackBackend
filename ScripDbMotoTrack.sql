@@ -121,6 +121,7 @@ CREATE TABLE Vehiculo (
 );
 
 CREATE TABLE Solicitud (
+    idSolicitud SERIAL PRIMARY KEY,
     idPersona INT REFERENCES Persona(idPersona),
     idEmpleado INT REFERENCES Persona(idPersona),
     idMatricula INT REFERENCES Matricula(idMatricula),
@@ -134,8 +135,7 @@ CREATE TABLE Solicitud (
     notaRevision TEXT,
     detalleRechazo TEXT,
     fechaRegistro DATE DEFAULT CURRENT_DATE,
-    fechaProcesada TIMESTAMP,
-    PRIMARY KEY (idPersona, idEmpleado, idVehiculo, idMatricula)
+    fechaProcesada TIMESTAMP
 );
 
 CREATE TABLE Notificaciones (

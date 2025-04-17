@@ -150,16 +150,29 @@ const cancelarMatricula = async (idMatricula) => {
 /**
  * Obtener todas las matrículas activas
  */
-const obtenerMatriculasActivas = async () => {
+const obtenerMatriculasActivas = async (filtros = {}) => {
   try {
-    const result = await pool.query(
-      `SELECT m.*, v.chasis, p.nombres, p.apellidos, p.cedula
-       FROM Matricula m
-       JOIN Vehiculo v ON m.idMatricula = v.idMatricula
-       JOIN Persona p ON v.idPropietario = p.idPersona
-       WHERE m.estado = 'Generada'
-       ORDER BY m.fechaEmisionMatricula DESC`
-    );
+    let query = `
+      SELECT m.*, v.chasis, p.nombres, p.apellidos, p.cedula
+      FROM Matricula m
+      JOIN Vehiculo v ON m.idMatricula = v.idMatricula
+      JOIN Persona p ON v.idPropietario = p.idPersona
+      WHERE m.estado = 'Generada'
+    `;
+    
+    const queryParams = ['Generada'];
+    let paramCount = 2;
+    
+    // Aplicar filtro por ID si existe
+    if (filtros.id) {
+      query = query.replace('WHERE m.estado = ', 'WHERE m.idMatricula = $' + paramCount + ' AND m.estado = ');
+      queryParams.unshift(filtros.id);
+      paramCount++;
+    }
+    
+    query += ` ORDER BY m.fechaEmisionMatricula DESC`;
+    
+    const result = await pool.query(query, queryParams);
     
     return result.rows;
   } catch (error) {
@@ -172,10 +185,10 @@ const obtenerMatriculasActivas = async () => {
  * Obtener todas las matrículas con información completa
  * (propietario, vehículo, modelo, marca)
  */
-const obtenerMatriculasConInformacionRelacionada = async () => {
+const obtenerMatriculasConInformacionRelacionada = async (filtros = {}) => {
   try {
-    const result = await pool.query(
-      `SELECT 
+    let query = `
+      SELECT 
         m.idMatricula, 
         m.matriculaGenerada, 
         m.estado as estadoMatricula, 
@@ -197,8 +210,21 @@ const obtenerMatriculasConInformacionRelacionada = async () => {
       JOIN Persona p ON v.idPropietario = p.idPersona
       JOIN Modelo mo ON v.idModelo = mo.idModelo
       JOIN Marca ma ON mo.idMarca = ma.idMarca
-      ORDER BY m.fechaEmisionMatricula DESC`
-    );
+    `;
+    
+    const queryParams = [];
+    let paramCount = 1;
+    
+    // Aplicar filtro por ID si existe
+    if (filtros.id) {
+      query += ` WHERE m.idMatricula = $${paramCount}`;
+      queryParams.push(filtros.id);
+      paramCount++;
+    }
+    
+    query += ` ORDER BY m.fechaEmisionMatricula DESC`;
+    
+    const result = await pool.query(query, queryParams);
     
     return result.rows;
   } catch (error) {

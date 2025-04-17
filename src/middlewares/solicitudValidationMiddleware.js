@@ -101,7 +101,7 @@ const validateSolicitudCreation = (req, res, next) => {
 // Validación para procesar solicitud
 const validateProcesarSolicitud = (req, res, next) => {
   const schema = Joi.object({
-    idVehiculo: Joi.number().integer().required(),
+    idSolicitud: Joi.number().integer().required(),
     estadoDecision: Joi.string().valid('Aprobada', 'Rechazada').required(),
     notaRevision: Joi.string().when('estadoDecision', {
       is: 'Aprobada',
@@ -117,7 +117,9 @@ const validateProcesarSolicitud = (req, res, next) => {
       is: 'Rechazada',
       then: Joi.string().required().min(5),
       otherwise: Joi.string().optional()
-    })
+    }),
+    // Mantenemos idVehiculo por compatibilidad con el código existente
+    idVehiculo: Joi.number().integer().optional()
   });
 
   const { error } = schema.validate(req.body);
@@ -136,8 +138,10 @@ const validateProcesarSolicitud = (req, res, next) => {
 // Validación para asignar solicitud a empleado
 const validateAsignarSolicitud = (req, res, next) => {
   const schema = Joi.object({
-    idVehiculo: Joi.number().integer().required(),
-    idEmpleado: Joi.number().integer().required()
+    idSolicitud: Joi.number().integer().required(),
+    idEmpleado: Joi.number().integer().required(),
+    // Mantenemos idVehiculo por compatibilidad con el código existente
+    idVehiculo: Joi.number().integer().optional()
   });
 
   const { error } = schema.validate(req.body);

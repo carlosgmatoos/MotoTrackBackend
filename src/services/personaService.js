@@ -2,6 +2,7 @@ const { pool } = require('../db');
 
 const getAllPersonas = async (filtros = {}) => {
   const {
+    id,
     nombres,
     apellidos,
     cedula,
@@ -23,6 +24,12 @@ const getAllPersonas = async (filtros = {}) => {
   
   const queryParams = [];
   let paramCount = 1;
+  
+  if (id) {
+    query += ` AND p.idPersona = $${paramCount}`;
+    queryParams.push(id);
+    paramCount++;
+  }
   
   if (nombres) {
     query += ` AND p.nombres ILIKE $${paramCount}`;

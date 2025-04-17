@@ -38,6 +38,12 @@ solicitudRouter.get('/solicitud/mis-solicitudes',
   solicitudController.obtenerSolicitudesCiudadano
 );
 
+// Ruta para obtener una solicitud específica por su ID
+solicitudRouter.get('/solicitud/:id', 
+  authMiddleware, 
+  solicitudController.obtenerSolicitudPorId
+);
+
 // Rutas para empleados
 solicitudRouter.get('/solicitud/empleado/todas', 
   [authMiddleware, isEmpleado], 
