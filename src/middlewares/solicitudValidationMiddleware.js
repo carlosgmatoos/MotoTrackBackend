@@ -31,6 +31,19 @@ const validateSolicitudCreation = (req, res, next) => {
     // Validar los campos obligatorios manualmente para mayor flexibilidad
     const errores = [];
     
+    // Validar los datos del seguro cuando se proporcionen
+    if (body.datoSeguro || body.seguro) {
+      const datosSeguro = body.datoSeguro || body.seguro;
+      
+      if (!datosSeguro.proveedor) {
+        errores.push('El proveedor del seguro es obligatorio');
+      }
+      
+      if (!datosSeguro.numeroPoliza) {
+        errores.push('El número de póliza del seguro es obligatorio');
+      }
+    }
+    
     if (!body.chasis) {
       errores.push('El número de chasis es obligatorio');
     } else if (body.chasis.length !== 17) {

@@ -142,20 +142,19 @@ const crearSolicitud = async (req, res) => {
 
     // Si se proporciona seguro, validar campos requeridos
     if (datosSeguro) {
-      // Si se proporciona idSeguro o numeroPoliza, verificar que sean valores válidos
-      if (datosSeguro.idSeguro && typeof datosSeguro.idSeguro !== 'number') {
+      if (!datosSeguro.proveedor) {
         return res.status(400).json({
           success: false,
-          error: 'Datos inválidos',
-          message: 'El ID del seguro debe ser un número válido'
+          error: 'Datos incompletos',
+          message: 'El proveedor del seguro es obligatorio'
         });
       }
       
-      if (datosSeguro.numeroPoliza && typeof datosSeguro.numeroPoliza !== 'string') {
+      if (!datosSeguro.numeroPoliza) {
         return res.status(400).json({
           success: false,
-          error: 'Datos inválidos',
-          message: 'El número de póliza debe ser una cadena de texto válida'
+          error: 'Datos incompletos',
+          message: 'El número de póliza del seguro es obligatorio'
         });
       }
     }

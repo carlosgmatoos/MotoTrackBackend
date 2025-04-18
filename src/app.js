@@ -25,6 +25,7 @@ const vehiculoRouter = require('./routes/vehiculoRoutes');
 const solicitudRouter = require('./routes/solicitudRoutes');
 const notificacionRouter = require('./routes/notificacionRoutes');
 const matriculaRouter = require('./routes/matriculaRoutes');
+const statisticsRouter = require('./routes/statisticsRoutes');
 
 // Cargar archivo swagger.yml
 const swaggerFilePath = path.resolve(__dirname, 'swagger.yml');
@@ -52,7 +53,19 @@ const app = express();
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cors());
+
+// CORS configuration
+const corsOptions = {
+  origin: [
+    'http://192.168.159.1:5173',
+    'http://192.168.184.1:5173',
+    'http://192.168.1.11:5173'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+app.use(cors(corsOptions));
 
 connectDB();
 
@@ -81,7 +94,8 @@ app.use('/api', [
   vehiculoRouter,
   solicitudRouter,
   notificacionRouter,
-  matriculaRouter
+  matriculaRouter,
+  statisticsRouter
 ]);
 
 // Middleware para manejar rutas no encontradas

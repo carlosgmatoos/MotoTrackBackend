@@ -2290,18 +2290,18 @@ components:
           type: integer
           description: Año del vehículo
           example: 2022
-        # Datos del seguro (solo idSeguro y numeroPoliza)
+        # Datos del seguro
         seguro:
           type: object
-          description: Información del seguro (opcional)
+          description: Información del seguro (opcional, pero si se proporciona, tanto proveedor como numeroPoliza son obligatorios)
           properties:
-            idSeguro:
-              type: integer
-              description: ID del seguro existente
-              example: 5
+            proveedor:
+              type: string
+              description: Nombre del proveedor del seguro (obligatorio si se proporciona seguro)
+              example: "Seguros Universal"
             numeroPoliza:
               type: string
-              description: Número de póliza del seguro
+              description: Número de póliza del seguro (obligatorio si se proporciona seguro)
               example: "PL98765432"
         # Datos de persona/ciudadano (en el orden específico solicitado)
         persona:
@@ -5672,6 +5672,20 @@ paths:
           schema:
             type: integer
             example: 5
+        - name: periodo
+          in: query
+          description: Periodo para las tendencias de solicitudes (semana, mes, trimestre, año)
+          schema:
+            type: string
+            enum: [semana, mes, trimestre, año]
+            default: mes
+        - name: vista
+          in: query
+          description: Sección específica de estadísticas a mostrar
+          schema:
+            type: string
+            enum: [completo, matriculas, solicitudes, empleados, distribucion, tendencias]
+            default: completo
       responses:
         '200':
           description: Solicitudes obtenidas correctamente
@@ -5908,3 +5922,490 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /statistics/dashboard:
+    get:
+      tags:
+        - Estadísticas
+      summary: Obtener estadísticas generales del sistema
+      description: Retorna estadísticas generales del sistema incluyendo total de matrículas, solicitudes pendientes, tasa de aprobación y distribución por marca, tipo y municipio.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: fechaDesde
+          in: query
+          description: Fecha inicial para filtrar (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: fechaHasta
+          in: query
+          description: Fecha final para filtrar (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: idProvincia
+          in: query
+          description: ID de la provincia para filtrar
+          schema:
+            type: integer
+        - name: idMunicipio
+          in: query
+          description: ID del municipio para filtrar
+          schema:
+            type: integer
+        - name: idMarca
+          in: query
+          description: ID de la marca para filtrar
+          schema:
+            type: integer
+        - name: idTipoVehiculo
+          in: query
+          description: ID del tipo de vehículo para filtrar
+          schema:
+            type: integer
+        - name: periodo
+          in: query
+          description: Periodo para las tendencias de solicitudes (semana, mes, trimestre, año)
+          schema:
+            type: string
+            enum: [semana, mes, trimestre, año]
+            default: mes
+        - name: vista
+          in: query
+          description: Sección específica de estadísticas a mostrar
+          schema:
+            type: string
+            enum: [completo, matriculas, solicitudes, empleados, distribucion, tendencias]
+            default: completo
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      matriculas:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                            example: 150
+                          generadas:
+                            type: integer
+                            example: 120
+                      solicitudes:
+                        type: object
+                        properties:
+                          total:
+                            type: integer
+                            example: 200
+                          pendientes:
+                            type: integer
+                            example: 15
+                          aprobadas:
+                            type: integer
+                            example: 150
+                          rechazadas:
+                            type: integer
+                            example: 35
+                          tasaAprobacion:
+                            type: string
+                            example: "81.08"
+                      usuarios:
+                        type: object
+                        properties:
+                          administradores:
+                            type: integer
+                            example: 3
+                          empleados:
+                            type: object
+                            properties:
+                              total:
+                                type: integer
+                                example: 20
+                              activos:
+                                type: integer
+                                example: 18
+                              nuevosEsteMes:
+                                type: integer
+                                example: 2
+                      distribucion:
+                        type: object
+                        properties:
+                          marca:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                marca:
+                                  type: string
+                                  example: "Honda"
+                                cantidad:
+                                  type: integer
+                                  example: 45
+                                porcentaje:
+                                  type: number
+                                  example: 30.00
+                          tipo:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                tipo:
+                                  type: string
+                                  example: "Deportivo"
+                                cantidad:
+                                  type: integer
+                                  example: 35
+                                porcentaje:
+                                  type: number
+                                  example: 23.33
+                          municipio:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                municipio:
+                                  type: string
+                                  example: "Santo Domingo Este"
+                                cantidad:
+                                  type: integer
+                                  example: 75
+                                porcentaje:
+                                  type: number
+                                  example: 50.00
+                      tendencias:
+                        type: object
+                        properties:
+                          periodoLabel:
+                            type: string
+                            example: "Mes"
+                          datos:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                periodo:
+                                  type: string
+                                  example: "2023-05"
+                                total:
+                                  type: integer
+                                  example: 25
+                                pendientes:
+                                  type: integer
+                                  example: 5
+                                aprobadas:
+                                  type: integer
+                                  example: 18
+                                rechazadas:
+                                  type: integer
+                                  example: 2
+        '401':
+          $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/schemas/Error'
+
+  /statistics/ciudadano:
+    get:
+      tags:
+        - Estadísticas
+      summary: Obtener estadísticas personales del ciudadano autenticado
+      description: Retorna estadísticas personales del ciudadano incluyendo total de motocicletas activas, solicitudes pendientes, solicitudes aprobadas y matrículas generadas.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      motocicletas:
+                        type: object
+                        properties:
+                          activas:
+                            type: integer
+                            example: 2
+                      solicitudes:
+                        type: object
+                        properties:
+                          pendientes:
+                            type: integer
+                            example: 1
+                          aprobadas:
+                            type: integer
+                            example: 3
+                          total:
+                            type: integer
+                            example: 4
+                      matriculas:
+                        type: object
+                        properties:
+                          generadas:
+                            type: integer
+                            example: 2
+        '400':
+          description: Datos incompletos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: 'Datos incompletos'
+                  message:
+                    type: string
+                    example: 'No se encontraron datos de persona asociados a su usuario'
+        '401':
+          $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/schemas/Error'
+
+  /statistics/empleado:
+    get:
+      tags:
+        - Estadísticas
+      summary: Obtener estadísticas del empleado autenticado
+      description: Retorna estadísticas del empleado incluyendo total de solicitudes pendientes, solicitudes procesadas hoy, solicitudes aprobadas, tasa de aprobación, tendencias por período y distribución de vehículos por marca, tipo y municipio.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: fechaDesde
+          in: query
+          required: false
+          description: Filtrar por fecha desde (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+            example: "2023-01-01"
+        - name: fechaHasta
+          in: query
+          required: false
+          description: Filtrar por fecha hasta (formato YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+            example: "2023-12-31"
+        - name: idProvincia
+          in: query
+          required: false
+          description: Filtrar por ID de provincia
+          schema:
+            type: integer
+            example: 1
+        - name: idMunicipio
+          in: query
+          required: false
+          description: Filtrar por ID de municipio
+          schema:
+            type: integer
+            example: 1
+        - name: idMarca
+          in: query
+          required: false
+          description: Filtrar por ID de marca
+          schema:
+            type: integer
+            example: 1
+        - name: idTipoVehiculo
+          in: query
+          required: false
+          description: Filtrar por ID de tipo de vehículo
+          schema:
+            type: integer
+            example: 1
+        - name: periodo
+          in: query
+          required: false
+          description: Período para las tendencias
+          schema:
+            type: string
+            enum: [semana, mes, trimestre, año]
+            default: mes
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      solicitudes:
+                        type: object
+                        properties:
+                          pendientes:
+                            type: integer
+                            description: Total de solicitudes pendientes asignadas al empleado
+                            example: 5
+                          procesadasHoy:
+                            type: integer
+                            description: Total de solicitudes procesadas hoy por el empleado
+                            example: 3
+                          aprobadas:
+                            type: integer
+                            description: Total de solicitudes aprobadas por el empleado (histórico)
+                            example: 45
+                          rechazadas:
+                            type: integer
+                            description: Total de solicitudes rechazadas por el empleado (histórico)
+                            example: 15
+                          totalProcesadas:
+                            type: integer
+                            description: Total de solicitudes procesadas por el empleado (aprobadas + rechazadas)
+                            example: 60
+                          tasaAprobacion:
+                            type: number
+                            format: float
+                            description: Porcentaje de solicitudes aprobadas del total procesadas
+                            example: 75.0
+                      tendencias:
+                        type: object
+                        properties:
+                          periodoLabel:
+                            type: string
+                            description: Etiqueta del período seleccionado
+                            example: "Mes"
+                          datos:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                periodo:
+                                  type: string
+                                  description: Identificador del período
+                                  example: "2023-07"
+                                total:
+                                  type: integer
+                                  description: Total de solicitudes en el período
+                                  example: 12
+                                aprobadas:
+                                  type: integer
+                                  description: Solicitudes aprobadas en el período
+                                  example: 8
+                                rechazadas:
+                                  type: integer
+                                  description: Solicitudes rechazadas en el período
+                                  example: 4
+                      distribucion:
+                        type: object
+                        properties:
+                          marca:
+                            type: array
+                            description: Distribución de vehículos por marca
+                            items:
+                              type: object
+                              properties:
+                                marca:
+                                  type: string
+                                  description: Nombre de la marca
+                                  example: "Honda"
+                                cantidad:
+                                  type: integer
+                                  description: Cantidad de vehículos
+                                  example: 15
+                                porcentaje:
+                                  type: number
+                                  format: float
+                                  description: Porcentaje del total
+                                  example: 25.42
+                          tipo:
+                            type: array
+                            description: Distribución de vehículos por tipo
+                            items:
+                              type: object
+                              properties:
+                                tipo:
+                                  type: string
+                                  description: Nombre del tipo de vehículo
+                                  example: "Motocicleta"
+                                cantidad:
+                                  type: integer
+                                  description: Cantidad de vehículos
+                                  example: 30
+                                porcentaje:
+                                  type: number
+                                  format: float
+                                  description: Porcentaje del total
+                                  example: 50.85
+                          municipio:
+                            type: array
+                            description: Distribución de vehículos por municipio en Santo Domingo
+                            items:
+                              type: object
+                              properties:
+                                municipio:
+                                  type: string
+                                  description: Nombre del municipio
+                                  example: "Santo Domingo Este"
+                                cantidad:
+                                  type: integer
+                                  description: Cantidad de vehículos
+                                  example: 12
+                                porcentaje:
+                                  type: number
+                                  format: float
+                                  description: Porcentaje del total
+                                  example: 40.00
+        '400':
+          description: Datos incompletos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: 'Datos incompletos'
+                  message:
+                    type: string
+                    example: 'No se encontraron datos de persona asociados a su usuario'
+        '401':
+          $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso denegado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: 'Acceso denegado'
+                  message:
+                    type: string
+                    example: 'Se requiere rol de empleado o administrador'
+        '500':
+          $ref: '#/components/schemas/Error'

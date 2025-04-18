@@ -325,28 +325,17 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
     
     // PASO 2: Manejar el seguro (continuar con el código existente)
     if (seguro) {
-      // Verificar si ya existe un seguro con ese número de póliza
-      const seguroResult = await client.query(
-        'SELECT idSeguro FROM Seguro WHERE numeroPoliza = $1',
-        [seguro.numeroPoliza]
-      );
-      
-      if (seguroResult.rows.length > 0) {
-        idSeguro = seguroResult.rows[0].idseguro;
-        
-        // Actualizar el seguro si es necesario
-        await client.query(
-          'UPDATE Seguro SET proveedor = $1, estado = $2 WHERE idSeguro = $3',
-          [seguro.proveedor, 'activo', idSeguro]
-        );
-      } else if (seguro.numeroPoliza && seguro.proveedor) {
-        // Crear un nuevo seguro
+      if (seguro.numeroPoliza && seguro.proveedor) {
+        // Crear un nuevo seguro cada vez que se crea una solicitud
         const nuevoSeguroResult = await client.query(
           'INSERT INTO Seguro (proveedor, numeroPoliza, estado) VALUES ($1, $2, $3) RETURNING idSeguro',
           [seguro.proveedor, seguro.numeroPoliza, 'activo']
         );
         
         idSeguro = nuevoSeguroResult.rows[0].idseguro;
+      } else {
+        // Si falta alguno de los campos requeridos
+        idSeguro = null;
       }
     } else {
       idSeguro = null;
