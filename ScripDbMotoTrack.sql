@@ -8,9 +8,6 @@ CREATE TABLE Marca (
 CREATE TABLE Modelo (
     idModelo SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
-    año INT NOT NULL,
-    color VARCHAR(30),
-    cilindraje VARCHAR(25),
     estado VARCHAR(15) CHECK (estado IN ('activo', 'inactivo', 'deshabilitado')),
     fechaCreacion DATE DEFAULT CURRENT_DATE,
     idMarca INT REFERENCES Marca(idMarca)
@@ -109,7 +106,10 @@ CREATE TABLE Persona (
 
 CREATE TABLE Vehiculo (
     idVehiculo SERIAL PRIMARY KEY,
-    chasis VARCHAR(17) NOT NULL,
+    chasis VARCHAR(17) UNIQUE NOT NULL,
+    año INT NOT NULL,
+    color VARCHAR(30),
+    cilindraje VARCHAR(25),
     tipoUso VARCHAR(15) NOT NULL CHECK (tipoUso IN ('Personal', 'Recreativo', 'Transporte', 'Deportivo', 'Empresarial')),
     estado VARCHAR(15) CHECK (estado IN ('activo', 'inactivo', 'deshabilitado')),
     fechaCreacion DATE DEFAULT CURRENT_DATE,

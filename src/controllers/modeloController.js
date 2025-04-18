@@ -3,15 +3,12 @@ const { handleError } = require('../utils/errorHandler');
 
 const getAllModelos = async (req, res) => {
   try {
-    const { id, nombre, año, color, cilindraje, idMarca, estado } = req.query;
+    const { id, nombre, idMarca, estado } = req.query;
     
     // Build filters object
     const filters = {};
     if (id) filters.idModelo = parseInt(id, 10);
     if (nombre) filters.nombre = nombre;
-    if (año) filters.año = parseInt(año, 10);
-    if (color) filters.color = color;
-    if (cilindraje) filters.cilindraje = cilindraje;
     if (idMarca) filters.idMarca = parseInt(idMarca, 10);
     if (estado) filters.estado = estado;
     
@@ -44,22 +41,19 @@ const getAllModelos = async (req, res) => {
 
 const createModelo = async (req, res) => {
   try {
-    const { nombre, año, color, cilindraje, idMarca } = req.body;
+    const { nombre, idMarca } = req.body;
     
     // Validate data
-    if (!nombre || !año || !idMarca) {
+    if (!nombre || !idMarca) {
       return res.status(400).json({
         success: false,
         error: 'Datos incompletos',
-        message: 'El nombre, año y ID de marca son obligatorios'
+        message: 'El nombre y ID de marca son obligatorios'
       });
     }
     
     const newModelo = await modeloService.createModelo({
       nombre,
-      año,
-      color,
-      cilindraje,
       idMarca
     });
     
@@ -85,13 +79,10 @@ const updateModelo = async (req, res) => {
       });
     }
     
-    const { nombre, año, color, cilindraje, idMarca, estado } = req.body;
+    const { nombre, idMarca, estado } = req.body;
     
     const updatedModelo = await modeloService.updateModelo(modeloId, {
       nombre,
-      año,
-      color,
-      cilindraje,
       idMarca,
       estado
     });

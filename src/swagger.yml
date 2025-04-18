@@ -1180,15 +1180,6 @@ components:
         nombre:
           type: string
           example: "CBR 600"
-        año:
-          type: integer
-          example: 2023
-        color:
-          type: string
-          example: "Rojo"
-        cilindraje:
-          type: string
-          example: "600cc"
         estado:
           type: string
           enum: [activo, inactivo, deshabilitado]
@@ -1208,21 +1199,11 @@ components:
       type: object
       required:
         - nombre
-        - año
         - idMarca
       properties:
         nombre:
           type: string
           example: "CBR 600"
-        año:
-          type: integer
-          example: 2023
-        color:
-          type: string
-          example: "Rojo"
-        cilindraje:
-          type: string
-          example: "600cc"
         idMarca:
           type: integer
           example: 1
@@ -1238,15 +1219,6 @@ components:
         nombre:
           type: string
           example: "CBR 600"
-        año:
-          type: integer
-          example: 2023
-        color:
-          type: string
-          example: "Negro"
-        cilindraje:
-          type: string
-          example: "600cc"
         idMarca:
           type: integer
           example: 1
@@ -1477,36 +1449,42 @@ components:
         chasis:
           type: string
           example: "1HGCM82633A123456"
-        tipoUso:
-          type: string
-          enum: [Personal, Recreativo, Transporte, Deportivo, Empresarial]
-          example: "Personal"
-        estado:
-          type: string
-          enum: [activo, inactivo, deshabilitado]
-          example: "activo"
-        fechaCreacion:
-          type: string
-          format: date-time
-          example: "2023-05-15T14:30:00Z"
-        idModelo:
-          type: integer
-          example: 1
-        nombreModelo:
-          type: string
-          example: "CBR 600"
-        añoModelo:
+        año:
           type: integer
           example: 2023
-        nombreMarca:
+        color:
           type: string
-          example: "Honda"
-        idPropietario:
+          example: "Rojo"
+        cilindraje:
+          type: string
+          example: "600cc"  
+        tipouso:
+          type: string
+          example: "Personal"
+        idpropietario:
           type: integer
           example: 1
-        nombrePropietario:
+        nombrepropietario:
           type: string
-          example: "Juan Pérez"
+          example: "Juan"
+        apellidopropietario:
+          type: string
+          example: "Pérez"
+        cedulapropietario:
+          type: string
+          example: "40212345678"
+        idmodelo:
+          type: integer
+          example: 1
+        nombremodelo:
+          type: string
+          example: "CBR 600"
+        idmarca:
+          type: integer
+          example: 1
+        nombremarca:
+          type: string
+          example: "Honda"
         idTipoVehiculo:
           type: integer
           example: 1
@@ -1532,21 +1510,37 @@ components:
         - chasis
         - tipoUso
         - idModelo
-        - idPropietario
         - idTipoVehiculo
         - idSeguro
       properties:
         chasis:
           type: string
           example: "1HGCM82633A123456"
-        tipoUso:
+        año:
+          type: integer
+          example: 2023
+        color:
           type: string
-          enum: [Personal, Recreativo, Transporte, Deportivo, Empresarial]
+          example: "Rojo"
+        cilindraje:
+          type: string
+          example: "600cc"  
+        tipouso:
+          type: string
           example: "Personal"
-        idModelo:
+        idpropietario:
           type: integer
           example: 1
-        idPropietario:
+        nombrepropietario:
+          type: string
+          example: "Juan"
+        apellidopropietario:
+          type: string
+          example: "Pérez"
+        cedulapropietario:
+          type: string
+          example: "40212345678"
+        idmodelo:
           type: integer
           example: 1
         idTipoVehiculo:
@@ -1570,16 +1564,33 @@ components:
         chasis:
           type: string
           example: "1HGCM82633A789012"
-        tipoUso:
-          type: string
-          enum: [Personal, Recreativo, Transporte, Deportivo, Empresarial]
-          example: "Recreativo"
-        idModelo:
+        año:
           type: integer
-          example: 2
-        idPropietario:
+          example: 2023
+        color:
+          type: string
+          example: "Negro"
+        cilindraje:
+          type: string
+          example: "600cc"  
+        tipouso:
+          type: string
+          example: "Recreativo"
+        idpropietario:
           type: integer
           example: 3
+        nombrepropietario:
+          type: string
+          example: "María Elena"
+        apellidopropietario:
+          type: string
+          example: "Sánchez Rodríguez"
+        cedulapropietario:
+          type: string
+          example: "40212345678"
+        idmodelo:
+          type: integer
+          example: 2
         idTipoVehiculo:
           type: integer
           example: 1
@@ -1973,6 +1984,18 @@ components:
               type: string
               description: Número de chasis del vehículo
               example: "5YJSA1E27KF302623"
+            año:
+              type: integer
+              description: Año del vehículo
+              example: 2022
+            color:
+              type: string
+              description: Color del vehículo
+              example: "Negro"
+            cilindraje:
+              type: string
+              description: Cilindraje del vehículo
+              example: "150cc"
             tipoUso:
               type: string
               description: Tipo de uso del vehículo
@@ -1988,18 +2011,6 @@ components:
                   type: string
                   description: Nombre del modelo del vehículo
                   example: "CBR 150R"
-                año:
-                  type: integer
-                  description: Año del modelo
-                  example: 2022
-                color:
-                  type: string
-                  description: Color del vehículo
-                  example: "Negro"
-                cilindraje:
-                  type: string
-                  description: Cilindraje del vehículo
-                  example: "150cc"
             marca:
               type: object
               properties:
@@ -2235,9 +2246,15 @@ components:
         nombremodelo:
           type: string
           example: "CBR 600"
-        añomodelo:
+        año:
           type: integer
           example: 2023
+        color:
+          type: string
+          example: "Rojo"
+        cilindraje:
+          type: string
+          example: "600cc"
         idmarca:
           type: integer
           example: 1
@@ -4489,21 +4506,6 @@ paths:
         - name: nombre
           in: query
           description: Filtrar por nombre
-          schema:
-            type: string
-        - name: año
-          in: query
-          description: Filtrar por año
-          schema:
-            type: integer
-        - name: color
-          in: query
-          description: Filtrar por color
-          schema:
-            type: string
-        - name: cilindraje
-          in: query
-          description: Filtrar por cilindraje
           schema:
             type: string
         - name: idMarca

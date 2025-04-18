@@ -4,7 +4,7 @@ const { handleError } = require('../utils/errorHandler');
 const getAllVehiculos = async (req, res) => {
   try {
     const { 
-      id, chasis, tipoUso, idModelo, idPropietario, 
+      id, chasis, año, color, cilindraje, tipoUso, idModelo, idPropietario, 
       idTipoVehiculo, idSeguro, idMatricula, estado 
     } = req.query;
     
@@ -12,6 +12,9 @@ const getAllVehiculos = async (req, res) => {
     const filters = {};
     if (id) filters.idVehiculo = parseInt(id, 10);
     if (chasis) filters.chasis = chasis;
+    if (año) filters.año = parseInt(año, 10);
+    if (color) filters.color = color;
+    if (cilindraje) filters.cilindraje = cilindraje;
     if (tipoUso) filters.tipoUso = tipoUso;
     if (idModelo) filters.idModelo = parseInt(idModelo, 10);
     if (idPropietario) filters.idPropietario = parseInt(idPropietario, 10);
@@ -50,7 +53,7 @@ const getAllVehiculos = async (req, res) => {
 const createVehiculo = async (req, res) => {
   try {
     const { 
-      chasis, tipoUso, idModelo, idTipoVehiculo, idSeguro, idMatricula 
+      chasis, año, color, cilindraje, tipoUso, idModelo, idTipoVehiculo, idSeguro, idMatricula 
     } = req.body;
     
     // Get the owner ID from the authenticated user
@@ -73,8 +76,20 @@ const createVehiculo = async (req, res) => {
       });
     }
     
+    // Validate año (optional but if provided, must be valid)
+    if (año !== undefined && (isNaN(parseInt(año, 10)) || parseInt(año, 10) < 1900)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Datos inválidos',
+        message: 'El año del vehículo debe ser un número válido mayor a 1900'
+      });
+    }
+    
     const newVehiculo = await vehiculoService.createVehiculo({
       chasis,
+      año: año ? parseInt(año, 10) : null,
+      color,
+      cilindraje,
       tipoUso,
       idModelo,
       idPropietario,
@@ -113,12 +128,24 @@ const updateVehiculo = async (req, res) => {
     }
     
     const { 
-      chasis, tipoUso, idModelo, idPropietario, 
+      chasis, año, color, cilindraje, tipoUso, idModelo, idPropietario, 
       idTipoVehiculo, idSeguro, idMatricula, estado 
     } = req.body;
     
+    // Validate año (optional but if provided, must be valid)
+    if (año !== undefined && (isNaN(parseInt(año, 10)) || parseInt(año, 10) < 1900)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Datos inválidos',
+        message: 'El año del vehículo debe ser un número válido mayor a 1900'
+      });
+    }
+    
     const updatedVehiculo = await vehiculoService.updateVehiculo(vehiculoId, {
       chasis,
+      año: año ? parseInt(año, 10) : undefined,
+      color,
+      cilindraje,
       tipoUso,
       idModelo,
       idPropietario,

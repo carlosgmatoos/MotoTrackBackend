@@ -16,7 +16,6 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
   try {
     await client.query('BEGIN');
     
-    // PASO 1: Manejar la persona (propietario)
     // Primero verificar si el usuario ya tiene una persona asociada
     if (datosPropietario.idUsuario) {
       const personaUsuarioResult = await client.query(
@@ -392,11 +391,14 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
     // PASO 5: Crear vehículo
     const vehiculoResult = await client.query(
       `INSERT INTO Vehiculo 
-       (chasis, tipoUso, estado, fechaCreacion, idModelo, idPropietario, idMatricula, idTipoVehiculo, idSeguro) 
-       VALUES ($1, $2, $3, CURRENT_DATE, $4, $5, $6, $7, $8) 
+       (chasis, año, color, cilindraje, tipoUso, estado, fechaCreacion, idModelo, idPropietario, idMatricula, idTipoVehiculo, idSeguro) 
+       VALUES ($1, $2, $3, $4, $5, $6, CURRENT_DATE, $7, $8, $9, $10, $11) 
        RETURNING idVehiculo`,
       [
-        datosVehiculo.chasis, 
+        datosVehiculo.chasis,
+        datosVehiculo.ano || null, // Usando 'ano' como viene del controller
+        datosVehiculo.color || null,
+        datosVehiculo.cilindraje || null, 
         datosVehiculo.tipoUso, 
         'inactivo', // El vehículo está inactivo hasta que se apruebe
         datosVehiculo.idModelo,
@@ -563,8 +565,8 @@ const obtenerSolicitudesPorCiudadano = async (idPersona, idUsuario = null, estad
     // Buscar solicitudes para esta persona específica con todos los datos relacionados
     const result = await client.query(
       `SELECT s.*, 
-        v.chasis, v.tipoUso, v.idTipoVehiculo,
-        m.idModelo, m.nombre as modeloNombre, m.año, m.color, m.cilindraje,
+        v.chasis, v.tipoUso, v.idTipoVehiculo, v.año, v.color, v.cilindraje,
+        m.idModelo, m.nombre as modeloNombre,
         ma.idMarca, ma.nombre as marcaNombre,
         c.idPersona as ciudadanoId, c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos, 
         c.cedula as ciudadanoCedula, c.fechaNacimiento as ciudadanoFechaNacimiento, 
@@ -622,12 +624,12 @@ const obtenerSolicitudesPorCiudadano = async (idPersona, idUsuario = null, estad
           idVehiculo: solicitud.idvehiculo,
           chasis: solicitud.chasis,
           tipoUso: solicitud.tipouso,
+          año: solicitud.año,
+          color: solicitud.color,
+          cilindraje: solicitud.cilindraje,
           modelo: {
             idModelo: solicitud.idmodelo,
-            nombre: solicitud.modelonombre,
-            año: solicitud.año,
-            color: solicitud.color,
-            cilindraje: solicitud.cilindraje
+            nombre: solicitud.modelonombre
           },
           marca: {
             idMarca: solicitud.idmarca,
@@ -704,8 +706,8 @@ const obtenerSolicitudPorId = async (idSolicitud) => {
   try {
     const result = await pool.query(
       `SELECT s.*, 
-        v.chasis, v.tipoUso, v.idTipoVehiculo,
-        m.idModelo, m.nombre as modeloNombre, m.año, m.color, m.cilindraje,
+        v.chasis, v.tipoUso, v.idTipoVehiculo, v.año, v.color, v.cilindraje,
+        m.idModelo, m.nombre as modeloNombre,
         ma.idMarca, ma.nombre as marcaNombre,
         c.idPersona as ciudadanoId, c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos, 
         c.cedula as ciudadanoCedula, c.fechaNacimiento as ciudadanoFechaNacimiento, 
@@ -766,12 +768,12 @@ const obtenerSolicitudPorId = async (idSolicitud) => {
         idVehiculo: solicitud.idvehiculo,
         chasis: solicitud.chasis,
         tipoUso: solicitud.tipouso,
+        año: solicitud.año,
+        color: solicitud.color,
+        cilindraje: solicitud.cilindraje,
         modelo: {
           idModelo: solicitud.idmodelo,
-          nombre: solicitud.modelonombre,
-          año: solicitud.año,
-          color: solicitud.color,
-          cilindraje: solicitud.cilindraje
+          nombre: solicitud.modelonombre
         },
         marca: {
           idMarca: solicitud.idmarca,
@@ -843,8 +845,8 @@ const obtenerSolicitudesPorEmpleado = async (idEmpleado) => {
   try {
     const result = await pool.query(
       `SELECT s.*, 
-        v.chasis, v.tipoUso, v.idTipoVehiculo,
-        m.idModelo, m.nombre as modeloNombre, m.año, m.color, m.cilindraje,
+        v.chasis, v.tipoUso, v.idTipoVehiculo, v.año, v.color, v.cilindraje,
+        m.idModelo, m.nombre as modeloNombre,
         ma.idMarca, ma.nombre as marcaNombre,
         c.idPersona as ciudadanoId, c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos, 
         c.cedula as ciudadanoCedula, c.fechaNacimiento as ciudadanoFechaNacimiento, 
@@ -902,12 +904,12 @@ const obtenerSolicitudesPorEmpleado = async (idEmpleado) => {
           idVehiculo: solicitud.idvehiculo,
           chasis: solicitud.chasis,
           tipoUso: solicitud.tipouso,
+          año: solicitud.año,
+          color: solicitud.color,
+          cilindraje: solicitud.cilindraje,
           modelo: {
             idModelo: solicitud.idmodelo,
-            nombre: solicitud.modelonombre,
-            año: solicitud.año,
-            color: solicitud.color,
-            cilindraje: solicitud.cilindraje
+            nombre: solicitud.modelonombre
           },
           marca: {
             idMarca: solicitud.idmarca,
@@ -1039,39 +1041,21 @@ const obtenerTodasSolicitudes = async (filtros = {}, paginacion = { page: 1, lim
     // Consulta paginada con todos los datos relacionados
     const query = `
       SELECT s.*, 
-        v.chasis, v.tipoUso, v.idTipoVehiculo,
-        m.idModelo, m.nombre as modeloNombre, m.año, m.color, m.cilindraje,
+        v.chasis, v.tipoUso, v.año, v.color, v.cilindraje,
+        m.idModelo, m.nombre as modeloNombre,
         ma.idMarca, ma.nombre as marcaNombre,
-        c.idPersona as ciudadanoId, c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos, 
-        c.cedula as ciudadanoCedula, c.fechaNacimiento as ciudadanoFechaNacimiento, 
-        c.estadoCivil as ciudadanoEstadoCivil, c.sexo as ciudadanoSexo, 
-        c.telefono as ciudadanoTelefono, c.idUbicacion as ciudadanoIdUbicacion,
-        mat.idMatricula, mat.matriculaGenerada, mat.estado as estadoMatricula, mat.fechaEmisionMatricula,
-        e.idPersona as empleadoId, e.nombres as empleadoNombres, e.apellidos as empleadoApellidos,
-        tv.nombre as tipoVehiculoNombre, tv.capacidad as tipoVehiculoCapacidad,
-        seg.idSeguro, seg.proveedor as seguroProveedor, seg.numeroPoliza as seguroNumeroPoliza, seg.estado as seguroEstado,
-        u.direccion as ciudadanoDireccion,
-        mun.idMunicipio, mun.nombreMunicipio,
-        prov.idProvincia, prov.nombreProvincia,
-        uc.correo as ciudadanoCorreo,
-        ue.correo as empleadoCorreo
+        mat.matriculaGenerada, mat.estado as estadoMatricula, mat.fechaEmisionMatricula,
+        c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos
       FROM Solicitud s
       JOIN Vehiculo v ON s.idVehiculo = v.idVehiculo
       JOIN Modelo m ON v.idModelo = m.idModelo
       JOIN Marca ma ON m.idMarca = ma.idMarca
-      JOIN Persona c ON s.idPersona = c.idPersona
       JOIN Matricula mat ON s.idMatricula = mat.idMatricula
-      JOIN TipoVehiculo tv ON v.idTipoVehiculo = tv.idTipoVehiculo
-      LEFT JOIN Seguro seg ON v.idSeguro = seg.idSeguro
-      LEFT JOIN Persona e ON s.idEmpleado = e.idPersona
-      LEFT JOIN Ubicacion u ON c.idUbicacion = u.idUbicacion
-      LEFT JOIN Municipio mun ON u.idMunicipio = mun.idMunicipio
-      LEFT JOIN Provincia prov ON mun.idProvincia = prov.idProvincia
-      LEFT JOIN Usuario uc ON c.idUsuario = uc.idUsuario
-      LEFT JOIN Usuario ue ON e.idUsuario = ue.idUsuario
-      ${whereClause}
-      ORDER BY s.fechaRegistro DESC
-      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
+      JOIN Persona c ON s.idPersona = c.idPersona
+      WHERE ${whereClause}
+      ORDER BY 
+        CASE WHEN s.estadoDecision = 'Pendiente' THEN 0 ELSE 1 END,
+        s.fechaRegistro ASC
     `;
     
     queryParams.push(paginacion.limit, offset);
@@ -1100,12 +1084,12 @@ const obtenerTodasSolicitudes = async (filtros = {}, paginacion = { page: 1, lim
           idVehiculo: solicitud.idvehiculo,
           chasis: solicitud.chasis,
           tipoUso: solicitud.tipouso,
+          año: solicitud.año,
+          color: solicitud.color,
+          cilindraje: solicitud.cilindraje,
           modelo: {
             idModelo: solicitud.idmodelo,
-            nombre: solicitud.modelonombre,
-            año: solicitud.año,
-            color: solicitud.color,
-            cilindraje: solicitud.cilindraje
+            nombre: solicitud.modelonombre
           },
           marca: {
             idMarca: solicitud.idmarca,
@@ -1534,8 +1518,8 @@ const obtenerSolicitudesPorEmpleadoFiltradas = async (filtros) => {
     
     const query = `
       SELECT s.*, 
-        v.chasis, v.tipoUso,
-        m.idModelo, m.nombre as modeloNombre, m.año, m.color, m.cilindraje,
+        v.chasis, v.tipoUso, v.año, v.color, v.cilindraje,
+        m.idModelo, m.nombre as modeloNombre,
         ma.idMarca, ma.nombre as marcaNombre,
         mat.matriculaGenerada, mat.estado as estadoMatricula, mat.fechaEmisionMatricula,
         c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos

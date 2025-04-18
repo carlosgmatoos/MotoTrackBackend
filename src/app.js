@@ -54,12 +54,19 @@ app.use(express.json());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Middleware
+app.use(express.json({ limit: '50mb' }));
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
+
 // CORS configuration
 const corsOptions = {
   origin: [
     'http://192.168.159.1:5173',
     'http://192.168.184.1:5173',
-    'http://192.168.1.11:5173'
+    'http://192.168.1.11:5173',
+    'http://localhost:5173',      // Si accedes desde localhost en el frontend
+    'http://localhost:3000'       // Para solicitudes locales
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],

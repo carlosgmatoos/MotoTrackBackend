@@ -7,8 +7,7 @@ const getAllVehiculos = async (filters = {}) => {
   try {
     let query = `
       SELECT v.*, 
-             m.nombre as nombreModelo, 
-             m.año as añoModelo,
+             m.nombre as nombreModelo,
              ma.nombre as nombreMarca,
              tp.nombres as nombresPropietario,
              tp.apellidos as apellidosPropietario,
@@ -41,6 +40,25 @@ const getAllVehiculos = async (filters = {}) => {
     if (filters.tipoUso) {
       query += ` AND v.tipoUso = $${paramCounter}`;
       queryParams.push(filters.tipoUso);
+      paramCounter++;
+    }
+    
+    // Add filters for the new fields
+    if (filters.año) {
+      query += ` AND v.año = $${paramCounter}`;
+      queryParams.push(filters.año);
+      paramCounter++;
+    }
+    
+    if (filters.color) {
+      query += ` AND v.color ILIKE $${paramCounter}`;
+      queryParams.push(`%${filters.color}%`);
+      paramCounter++;
+    }
+    
+    if (filters.cilindraje) {
+      query += ` AND v.cilindraje ILIKE $${paramCounter}`;
+      queryParams.push(`%${filters.cilindraje}%`);
       paramCounter++;
     }
     
@@ -88,12 +106,14 @@ const getAllVehiculos = async (filters = {}) => {
     return result.rows.map(vehiculo => ({
       id: vehiculo.idvehiculo,
       chasis: vehiculo.chasis,
+      año: vehiculo.año,
+      color: vehiculo.color,
+      cilindraje: vehiculo.cilindraje,
       tipoUso: vehiculo.tipouso,
       estado: vehiculo.estado,
       fechaCreacion: vehiculo.fechacreacion,
       idModelo: vehiculo.idmodelo,
       nombreModelo: vehiculo.nombremodelo,
-      añoModelo: vehiculo.añomodelo,
       nombreMarca: vehiculo.nombremarca,
       idPropietario: vehiculo.idpropietario,
       nombrePropietario: `${vehiculo.nombrespropietario} ${vehiculo.apellidospropietario}`,
@@ -115,7 +135,10 @@ const getAllVehiculos = async (filters = {}) => {
  */
 const createVehiculo = async (vehiculoData) => {
   try {
-    const { chasis, tipoUso, idModelo, idPropietario, idTipoVehiculo, idSeguro, idMatricula } = vehiculoData;
+    const { 
+      chasis, año, color, cilindraje, tipoUso, 
+      idModelo, idPropietario, idTipoVehiculo, idSeguro, idMatricula 
+    } = vehiculoData;
     
     // Verificar si ya existe un vehículo con ese chasis
     const existente = await pool.query(
@@ -147,9 +170,9 @@ const createVehiculo = async (vehiculoData) => {
     }
     
     const result = await pool.query(
-      `INSERT INTO Vehiculo (chasis, tipoUso, estado, idModelo, idPropietario, idTipoVehiculo, idSeguro, idMatricula) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [chasis, tipoUso, 'activo', idModelo, idPropietario, idTipoVehiculo, idSeguro, idMatricula]
+      `INSERT INTO Vehiculo (chasis, año, color, cilindraje, tipoUso, estado, idModelo, idPropietario, idTipoVehiculo, idSeguro, idMatricula) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+      [chasis, año, color, cilindraje, tipoUso, 'activo', idModelo, idPropietario, idTipoVehiculo, idSeguro, idMatricula]
     );
     
     const vehiculo = result.rows[0];
@@ -169,7 +192,10 @@ const createVehiculo = async (vehiculoData) => {
  */
 const updateVehiculo = async (vehiculoId, vehiculoData) => {
   try {
-    const { chasis, tipoUso, idModelo, idPropietario, idTipoVehiculo, idSeguro, idMatricula, estado } = vehiculoData;
+    const { 
+      chasis, año, color, cilindraje, tipoUso, 
+      idModelo, idPropietario, idTipoVehiculo, idSeguro, idMatricula, estado 
+    } = vehiculoData;
     
     // Verificar si ya existe otro vehículo con ese chasis
     if (chasis) {
@@ -212,16 +238,19 @@ const updateVehiculo = async (vehiculoId, vehiculoData) => {
     const result = await pool.query(
       `UPDATE Vehiculo 
        SET chasis = COALESCE($1, chasis),
-           tipoUso = COALESCE($2, tipoUso),
-           idModelo = COALESCE($3, idModelo),
-           idPropietario = COALESCE($4, idPropietario),
-           idTipoVehiculo = COALESCE($5, idTipoVehiculo),
-           idSeguro = COALESCE($6, idSeguro),
-           idMatricula = COALESCE($7, idMatricula),
-           estado = COALESCE($8, estado)
-       WHERE idVehiculo = $9
+           año = COALESCE($2, año),
+           color = COALESCE($3, color),
+           cilindraje = COALESCE($4, cilindraje),
+           tipoUso = COALESCE($5, tipoUso),
+           idModelo = COALESCE($6, idModelo),
+           idPropietario = COALESCE($7, idPropietario),
+           idTipoVehiculo = COALESCE($8, idTipoVehiculo),
+           idSeguro = COALESCE($9, idSeguro),
+           idMatricula = COALESCE($10, idMatricula),
+           estado = COALESCE($11, estado)
+       WHERE idVehiculo = $12
        RETURNING *`,
-      [chasis, tipoUso, idModelo, idPropietario, idTipoVehiculo, idSeguro, idMatricula, estado, vehiculoId]
+      [chasis, año, color, cilindraje, tipoUso, idModelo, idPropietario, idTipoVehiculo, idSeguro, idMatricula, estado, vehiculoId]
     );
     
     if (result.rows.length === 0) {

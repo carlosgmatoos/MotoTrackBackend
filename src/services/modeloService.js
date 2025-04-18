@@ -26,24 +26,6 @@ const getAllModelos = async (filters = {}) => {
       paramCounter++;
     }
     
-    if (filters.año) {
-      query += ` AND m.año = $${paramCounter}`;
-      queryParams.push(filters.año);
-      paramCounter++;
-    }
-    
-    if (filters.color) {
-      query += ` AND m.color ILIKE $${paramCounter}`;
-      queryParams.push(`%${filters.color}%`);
-      paramCounter++;
-    }
-    
-    if (filters.cilindraje) {
-      query += ` AND m.cilindraje ILIKE $${paramCounter}`;
-      queryParams.push(`%${filters.cilindraje}%`);
-      paramCounter++;
-    }
-    
     if (filters.idMarca) {
       query += ` AND m.idMarca = $${paramCounter}`;
       queryParams.push(filters.idMarca);
@@ -64,9 +46,6 @@ const getAllModelos = async (filters = {}) => {
     return result.rows.map(modelo => ({
       id: modelo.idmodelo,
       nombre: modelo.nombre,
-      año: modelo.año,
-      color: modelo.color,
-      cilindraje: modelo.cilindraje,
       idMarca: modelo.idmarca,
       nombreMarca: modelo.nombremarca,
       estado: modelo.estado,
@@ -83,7 +62,7 @@ const getAllModelos = async (filters = {}) => {
  */
 const createModelo = async (modeloData) => {
   try {
-    const { nombre, año, color, cilindraje, idMarca } = modeloData;
+    const { nombre, idMarca } = modeloData;
     
     // Verificar que la marca existe
     const marcaResult = await pool.query(
@@ -96,9 +75,9 @@ const createModelo = async (modeloData) => {
     }
     
     const result = await pool.query(
-      `INSERT INTO Modelo (nombre, año, color, cilindraje, estado, idMarca) 
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [nombre, año, color, cilindraje, 'activo', idMarca]
+      `INSERT INTO Modelo (nombre, estado, idMarca) 
+       VALUES ($1, $2, $3) RETURNING *`,
+      [nombre, 'activo', idMarca]
     );
     
     const modelo = result.rows[0];
@@ -112,9 +91,6 @@ const createModelo = async (modeloData) => {
     return {
       id: modelo.idmodelo,
       nombre: modelo.nombre,
-      año: modelo.año,
-      color: modelo.color,
-      cilindraje: modelo.cilindraje,
       idMarca: modelo.idmarca,
       nombreMarca: marca.rows[0].nombre,
       estado: modelo.estado,
@@ -131,7 +107,7 @@ const createModelo = async (modeloData) => {
  */
 const updateModelo = async (modeloId, modeloData) => {
   try {
-    const { nombre, año, color, cilindraje, idMarca, estado } = modeloData;
+    const { nombre, idMarca, estado } = modeloData;
     
     // Si se proporciona una marca, verificar que existe
     if (idMarca) {
@@ -148,14 +124,11 @@ const updateModelo = async (modeloId, modeloData) => {
     const result = await pool.query(
       `UPDATE Modelo 
        SET nombre = COALESCE($1, nombre),
-           año = COALESCE($2, año),
-           color = COALESCE($3, color),
-           cilindraje = COALESCE($4, cilindraje),
-           idMarca = COALESCE($5, idMarca),
-           estado = COALESCE($6, estado)
-       WHERE idModelo = $7
+           idMarca = COALESCE($2, idMarca),
+           estado = COALESCE($3, estado)
+       WHERE idModelo = $4
        RETURNING *`,
-      [nombre, año, color, cilindraje, idMarca, estado, modeloId]
+      [nombre, idMarca, estado, modeloId]
     );
     
     if (result.rows.length === 0) {
@@ -173,9 +146,6 @@ const updateModelo = async (modeloId, modeloData) => {
     return {
       id: modelo.idmodelo,
       nombre: modelo.nombre,
-      año: modelo.año,
-      color: modelo.color,
-      cilindraje: modelo.cilindraje,
       idMarca: modelo.idmarca,
       nombreMarca: marca.rows[0].nombre,
       estado: modelo.estado,
