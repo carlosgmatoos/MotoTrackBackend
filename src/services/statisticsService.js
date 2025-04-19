@@ -177,30 +177,30 @@ const getSystemStatistics = async (filtros = {}) => {
       const distribucionMarcaResult = await client.query(distribucionMarcaQuery, params.slice(0, condicionesVehiculos.length));
       const distribucionMarca = distribucionMarcaResult.rows;
 
-      // Distribución por tipo de vehículo
+      // Distribución por tipo de vehículo - CAMBIAR a tipo de uso (tipoUso)
       const distribucionTipoQuery = `
         SELECT 
-          tv.nombre as tipo, 
+          v.tipoUso as tipo, 
           COUNT(*) as cantidad,
           ROUND((COUNT(*) * 100.0 / (SELECT COUNT(*) FROM Vehiculo v
-                                    JOIN TipoVehiculo tv ON v.idTipoVehiculo = tv.idTipoVehiculo
                                     ${whereVehiculos ? 'LEFT JOIN Persona p ON v.idPropietario = p.idPersona' : ''}
                                     ${whereVehiculos ? 'LEFT JOIN Ubicacion u ON p.idUbicacion = u.idUbicacion' : ''}
                                     ${whereVehiculos ? 'LEFT JOIN Municipio mu ON u.idMunicipio = mu.idMunicipio' : ''}
                                     ${whereVehiculos ? 'LEFT JOIN Provincia pr ON mu.idProvincia = pr.idProvincia' : ''}
                                     ${whereVehiculos ? 'LEFT JOIN Modelo md ON v.idModelo = md.idModelo' : ''}
                                     ${whereVehiculos ? 'LEFT JOIN Marca ma ON md.idMarca = ma.idMarca' : ''}
+                                    ${whereVehiculos ? 'LEFT JOIN TipoVehiculo tv ON v.idTipoVehiculo = tv.idTipoVehiculo' : ''}
                                     ${whereVehiculos})), 2) as porcentaje
         FROM Vehiculo v
-        JOIN TipoVehiculo tv ON v.idTipoVehiculo = tv.idTipoVehiculo
         ${whereVehiculos ? 'LEFT JOIN Persona p ON v.idPropietario = p.idPersona' : ''}
         ${whereVehiculos ? 'LEFT JOIN Ubicacion u ON p.idUbicacion = u.idUbicacion' : ''}
         ${whereVehiculos ? 'LEFT JOIN Municipio mu ON u.idMunicipio = mu.idMunicipio' : ''}
         ${whereVehiculos ? 'LEFT JOIN Provincia pr ON mu.idProvincia = pr.idProvincia' : ''}
         ${whereVehiculos ? 'LEFT JOIN Modelo md ON v.idModelo = md.idModelo' : ''}
         ${whereVehiculos ? 'LEFT JOIN Marca ma ON md.idMarca = ma.idMarca' : ''}
+        ${whereVehiculos ? 'LEFT JOIN TipoVehiculo tv ON v.idTipoVehiculo = tv.idTipoVehiculo' : ''}
         ${whereVehiculos}
-        GROUP BY tv.nombre
+        GROUP BY v.tipoUso
         ORDER BY cantidad DESC
       `;
       const distribucionTipoResult = await client.query(distribucionTipoQuery, params.slice(0, condicionesVehiculos.length));
@@ -236,9 +236,21 @@ const getSystemStatistics = async (filtros = {}) => {
       const distribucionMunicipio = distribucionMunicipioResult.rows;
 
       resultado.distribucion = {
-        marca: distribucionMarca,
-        tipo: distribucionTipo,
-        municipio: distribucionMunicipio
+        marca: distribucionMarca.map(item => ({
+          marca: item.marca,
+          cantidad: item.cantidad.toString(),
+          porcentaje: item.porcentaje.toString()
+        })),
+        tipo: distribucionTipo.map(item => ({
+          tipo: item.tipo,
+          cantidad: item.cantidad.toString(),
+          porcentaje: item.porcentaje.toString()
+        })),
+        municipio: distribucionMunicipio.map(item => ({
+          municipio: item.municipio,
+          cantidad: item.cantidad.toString(),
+          porcentaje: item.porcentaje.toString()
+        }))
       };
     }
     
@@ -246,81 +258,143 @@ const getSystemStatistics = async (filtros = {}) => {
       // Tendencias de solicitudes por períodos
       let periodoQuery = '';
       let periodoLabel = '';
+      // Año seleccionado para tendencias o el año actual si no se proporciona
+      const yearFilter = filtros.año ? parseInt(filtros.año) : new Date().getFullYear();
+      // Fecha límite para mostrar datos (hasta la fecha actual, nunca datos del futuro)
+      const fechaLimite = new Date() < new Date(yearFilter + 1, 0, 1) ? 
+                         'CURRENT_DATE' : 
+                         `'${yearFilter}-12-31'::date`;
+
+      // Crear condición de fecha según el año seleccionado
+      const inicioAñoSeleccionado = `'${yearFilter}-01-01'::date`;
+      const fechaCondition = `fechaRegistro >= ${inicioAñoSeleccionado} AND fechaRegistro <= ${fechaLimite}`;
+      
+      // Variables para generar series de fechas completas
+      let serieFechasSQL = '';
 
       switch (filtros.periodo) {
         case 'semana':
-          periodoQuery = `
+          // Generar serie para los 7 días de la semana actual
+          serieFechasSQL = `
+            WITH fechas AS (
+              SELECT generate_series(
+                date_trunc('week', CURRENT_DATE), 
+                date_trunc('week', CURRENT_DATE) + interval '6 days', 
+                '1 day'::interval
+              )::date as fecha
+            ),
+            stats AS (
+              SELECT 
+                fecha::date as periodo,
+                COUNT(s.idSolicitud) as total,
+                COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Pendiente') as pendientes,
+                COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Aprobada') as aprobadas,
+                COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Rechazada') as rechazadas
+              FROM fechas f
+              LEFT JOIN Solicitud s ON 
+                DATE(s.fechaRegistro) = f.fecha AND
+                s.fechaRegistro <= ${fechaLimite}
+                ${whereSolicitudes ? 'AND ' + condicionesSolicitudes.join(' AND ') : ''}
+              GROUP BY periodo
+              ORDER BY periodo
+            )
             SELECT 
-              to_char(date_trunc('week', fechaRegistro), 'YYYY-MM-DD') as periodo,
-              COUNT(*) as total,
-              COUNT(*) FILTER (WHERE estadoDecision = 'Pendiente') as pendientes,
-              COUNT(*) FILTER (WHERE estadoDecision = 'Aprobada') as aprobadas,
-              COUNT(*) FILTER (WHERE estadoDecision = 'Rechazada') as rechazadas
-            FROM Solicitud
-            WHERE fechaRegistro >= date_trunc('week', CURRENT_DATE - INTERVAL '12 weeks')
-            GROUP BY date_trunc('week', fechaRegistro)
-            ORDER BY date_trunc('week', fechaRegistro)
+              to_char(periodo, 'YYYY-MM-DD') as periodo,
+              total,
+              pendientes,
+              aprobadas,
+              rechazadas
+            FROM stats
           `;
-          periodoLabel = 'Semana del';
-          break;
-        case 'trimestre':
-          periodoQuery = `
-            SELECT 
-              EXTRACT(YEAR FROM fechaRegistro) || '-Q' || EXTRACT(QUARTER FROM fechaRegistro) as periodo,
-              COUNT(*) as total,
-              COUNT(*) FILTER (WHERE estadoDecision = 'Pendiente') as pendientes,
-              COUNT(*) FILTER (WHERE estadoDecision = 'Aprobada') as aprobadas,
-              COUNT(*) FILTER (WHERE estadoDecision = 'Rechazada') as rechazadas
-            FROM Solicitud
-            WHERE fechaRegistro >= date_trunc('quarter', CURRENT_DATE - INTERVAL '4 quarters')
-            GROUP BY EXTRACT(YEAR FROM fechaRegistro), EXTRACT(QUARTER FROM fechaRegistro)
-            ORDER BY EXTRACT(YEAR FROM fechaRegistro), EXTRACT(QUARTER FROM fechaRegistro)
-          `;
-          periodoLabel = 'Trimestre';
-          break;
-        case 'año':
-          periodoQuery = `
-            SELECT 
-              EXTRACT(YEAR FROM fechaRegistro) as periodo,
-              COUNT(*) as total,
-              COUNT(*) FILTER (WHERE estadoDecision = 'Pendiente') as pendientes,
-              COUNT(*) FILTER (WHERE estadoDecision = 'Aprobada') as aprobadas,
-              COUNT(*) FILTER (WHERE estadoDecision = 'Rechazada') as rechazadas
-            FROM Solicitud
-            WHERE fechaRegistro >= date_trunc('year', CURRENT_DATE - INTERVAL '5 years')
-            GROUP BY EXTRACT(YEAR FROM fechaRegistro)
-            ORDER BY EXTRACT(YEAR FROM fechaRegistro)
-          `;
-          periodoLabel = 'Año';
+          periodoQuery = serieFechasSQL;
+          periodoLabel = 'Día';
           break;
         case 'mes':
-        default:
-          periodoQuery = `
+          // Para mes, mostrar las 4 semanas del mes actual
+          serieFechasSQL = `
+            WITH semanas AS (
+              SELECT 
+                generate_series(0, 3) as num_semana
+            ),
+            stats AS (
+              SELECT 
+                s.num_semana,
+                COUNT(sol.idSolicitud) as total,
+                COUNT(sol.idSolicitud) FILTER (WHERE sol.estadoDecision = 'Pendiente') as pendientes,
+                COUNT(sol.idSolicitud) FILTER (WHERE sol.estadoDecision = 'Aprobada') as aprobadas,
+                COUNT(sol.idSolicitud) FILTER (WHERE sol.estadoDecision = 'Rechazada') as rechazadas
+              FROM semanas s
+              LEFT JOIN Solicitud sol ON 
+                EXTRACT(WEEK FROM sol.fechaRegistro) - EXTRACT(WEEK FROM date_trunc('month', sol.fechaRegistro)) = s.num_semana AND
+                EXTRACT(MONTH FROM sol.fechaRegistro) = EXTRACT(MONTH FROM CURRENT_DATE) AND
+                EXTRACT(YEAR FROM sol.fechaRegistro) = ${yearFilter} AND
+                sol.fechaRegistro <= ${fechaLimite}
+                ${whereSolicitudes ? 'AND ' + condicionesSolicitudes.map(c => c.replace(/^\w+/, 'sol.$&')).join(' AND ') : ''}
+              GROUP BY s.num_semana
+              ORDER BY s.num_semana
+            )
             SELECT 
-              to_char(date_trunc('month', fechaRegistro), 'YYYY-MM') as periodo,
-              COUNT(*) as total,
-              COUNT(*) FILTER (WHERE estadoDecision = 'Pendiente') as pendientes,
-              COUNT(*) FILTER (WHERE estadoDecision = 'Aprobada') as aprobadas,
-              COUNT(*) FILTER (WHERE estadoDecision = 'Rechazada') as rechazadas
-            FROM Solicitud
-            WHERE fechaRegistro >= date_trunc('month', CURRENT_DATE - INTERVAL '12 months')
-            GROUP BY date_trunc('month', fechaRegistro)
-            ORDER BY date_trunc('month', fechaRegistro)
+              'Semana ' || (num_semana + 1) as periodo,
+              total,
+              pendientes,
+              aprobadas,
+              rechazadas
+            FROM stats
           `;
+          periodoQuery = serieFechasSQL;
+          periodoLabel = 'Semana';
+          break;
+        case 'año':
+        default:
+          // Para meses, generamos todos los meses del año seleccionado
+          serieFechasSQL = `
+            WITH meses AS (
+              SELECT 
+                generate_series(1, 12) as num_mes
+            ),
+            stats AS (
+              SELECT 
+                m.num_mes,
+                COUNT(s.idSolicitud) as total,
+                COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Pendiente') as pendientes,
+                COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Aprobada') as aprobadas,
+                COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Rechazada') as rechazadas
+              FROM meses m
+              LEFT JOIN Solicitud s ON 
+                EXTRACT(MONTH FROM s.fechaRegistro) = m.num_mes AND
+                EXTRACT(YEAR FROM s.fechaRegistro) = ${yearFilter} AND
+                s.fechaRegistro <= ${fechaLimite}
+                ${whereSolicitudes ? 'AND ' + condicionesSolicitudes.map(c => c.replace(/^\w+/, 's.$&')).join(' AND ') : ''}
+              GROUP BY m.num_mes
+              ORDER BY m.num_mes
+            )
+            SELECT 
+              to_char(make_date(${yearFilter}, num_mes, 1), 'Mon') as periodo,
+              total,
+              pendientes,
+              aprobadas,
+              rechazadas
+            FROM stats
+          `;
+          periodoQuery = serieFechasSQL;
           periodoLabel = 'Mes';
       }
 
-      const tendenciasResult = await client.query(periodoQuery);
+      // Añadir parámetros adicionales para la consulta si es necesario
+      let tendenciaParams = [];
+
+      const tendenciasResult = await client.query(periodoQuery, tendenciaParams);
       const tendencias = tendenciasResult.rows.map(row => ({
         ...row,
-        pendientes: parseInt(row.pendientes),
-        aprobadas: parseInt(row.aprobadas),
-        rechazadas: parseInt(row.rechazadas),
-        total: parseInt(row.total)
+        pendientes: parseInt(row.pendientes || 0),
+        aprobadas: parseInt(row.aprobadas || 0),
+        rechazadas: parseInt(row.rechazadas || 0),
+        total: parseInt(row.total || 0)
       }));
 
       resultado.tendencias = {
         periodoLabel,
+        año: yearFilter,
         datos: tendencias
       };
     }
@@ -571,93 +645,149 @@ const getEmpleadoStatistics = async (idEmpleado, filtros = {}) => {
     const periodo = filtros.periodo || 'mes';
     let periodoQuery = '';
     let periodoLabel = '';
-    let tendenciasBaseQuery = '';
     
-    // Construir la base de la consulta para tendencias con filtros
-    tendenciasBaseQuery = `
-      FROM Solicitud s
-      JOIN Vehiculo v ON s.idVehiculo = v.idVehiculo
-      JOIN Modelo md ON v.idModelo = md.idModelo
-      JOIN Marca ma ON md.idMarca = ma.idMarca
-      JOIN TipoVehiculo tv ON v.idTipoVehiculo = tv.idTipoVehiculo
-      JOIN Persona p ON v.idPropietario = p.idPersona
-      LEFT JOIN Ubicacion u ON p.idUbicacion = u.idUbicacion
-      LEFT JOIN Municipio m ON u.idMunicipio = m.idMunicipio
-      LEFT JOIN Provincia pr ON m.idProvincia = pr.idProvincia
-      WHERE s.idEmpleado = $1
-      AND s.fechaProcesada IS NOT NULL
-      ${condicionesVehiculos.length > 0 ? 'AND ' + condicionesVehiculos.join(' AND ') : ''}
-    `;
+    // Año seleccionado para tendencias o el año actual si no se proporciona
+    const yearFilter = filtros.año ? parseInt(filtros.año) : new Date().getFullYear();
+    // Fecha límite para mostrar datos (hasta la fecha actual, nunca datos del futuro)
+    const fechaLimite = new Date() < new Date(yearFilter + 1, 0, 1) ? 
+                      'CURRENT_DATE' : 
+                      `'${yearFilter}-12-31'::date`;
+
+    // Crear condición de fecha según el año seleccionado
+    const inicioAñoSeleccionado = `'${yearFilter}-01-01'::date`;
+    const fechaCondition = `s.fechaProcesada >= ${inicioAñoSeleccionado} AND s.fechaProcesada <= ${fechaLimite}`;
+    
+    // Variables para generar series de fechas completas
+    let serieFechasSQL = '';
+    
+    // Parámetros a reutilizar en las consultas
+    const empleadoParam = params[0]; // idEmpleado siempre es el primer parámetro
 
     switch (periodo) {
       case 'semana':
-        periodoQuery = `
+        // Generar serie para los 7 días de la semana actual
+        serieFechasSQL = `
+          WITH fechas AS (
+            SELECT generate_series(
+              date_trunc('week', CURRENT_DATE), 
+              date_trunc('week', CURRENT_DATE) + interval '6 days', 
+              '1 day'::interval
+            )::date as fecha
+          ),
+          stats AS (
+            SELECT 
+              fecha::date as periodo,
+              COUNT(s.idSolicitud) as total,
+              COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Aprobada') as aprobadas,
+              COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Rechazada') as rechazadas
+            FROM fechas f
+            LEFT JOIN Solicitud s ON 
+              DATE(s.fechaProcesada) = f.fecha AND
+              s.idEmpleado = $1 AND
+              s.fechaProcesada IS NOT NULL AND
+              s.fechaProcesada <= ${fechaLimite}
+              ${condicionesVehiculos.length > 0 ? 'AND ' + condicionesVehiculos.map(c => c.replace(/^\w+/, 's.$&')).join(' AND ') : ''}
+              ${condicionesSolicitudes.length > 0 ? 'AND ' + condicionesSolicitudes.map(c => c.replace(/^\w+/, 's.$&')).join(' AND ') : ''}
+            GROUP BY periodo
+            ORDER BY periodo
+          )
           SELECT 
-            to_char(date_trunc('week', s.fechaProcesada), 'YYYY-MM-DD') as periodo,
-            COUNT(*) as total,
-            COUNT(*) FILTER (WHERE s.estadoDecision = 'Aprobada') as aprobadas,
-            COUNT(*) FILTER (WHERE s.estadoDecision = 'Rechazada') as rechazadas
-          ${tendenciasBaseQuery}
-          AND s.fechaProcesada >= date_trunc('week', CURRENT_DATE - INTERVAL '12 weeks')
-          GROUP BY date_trunc('week', s.fechaProcesada)
-          ORDER BY date_trunc('week', s.fechaProcesada)
+            to_char(periodo, 'YYYY-MM-DD') as periodo,
+            total,
+            aprobadas,
+            rechazadas
+          FROM stats
         `;
-        periodoLabel = 'Semana del';
-        break;
-      case 'trimestre':
-        periodoQuery = `
-          SELECT 
-            EXTRACT(YEAR FROM s.fechaProcesada) || '-Q' || EXTRACT(QUARTER FROM s.fechaProcesada) as periodo,
-            COUNT(*) as total,
-            COUNT(*) FILTER (WHERE s.estadoDecision = 'Aprobada') as aprobadas,
-            COUNT(*) FILTER (WHERE s.estadoDecision = 'Rechazada') as rechazadas
-          ${tendenciasBaseQuery}
-          AND s.fechaProcesada >= date_trunc('quarter', CURRENT_DATE - INTERVAL '4 quarters')
-          GROUP BY EXTRACT(YEAR FROM s.fechaProcesada), EXTRACT(QUARTER FROM s.fechaProcesada)
-          ORDER BY EXTRACT(YEAR FROM s.fechaProcesada), EXTRACT(QUARTER FROM s.fechaProcesada)
-        `;
-        periodoLabel = 'Trimestre';
-        break;
-      case 'año':
-        periodoQuery = `
-          SELECT 
-            EXTRACT(YEAR FROM s.fechaProcesada)::text as periodo,
-            COUNT(*) as total,
-            COUNT(*) FILTER (WHERE s.estadoDecision = 'Aprobada') as aprobadas,
-            COUNT(*) FILTER (WHERE s.estadoDecision = 'Rechazada') as rechazadas
-          ${tendenciasBaseQuery}
-          AND s.fechaProcesada >= date_trunc('year', CURRENT_DATE - INTERVAL '5 years')
-          GROUP BY EXTRACT(YEAR FROM s.fechaProcesada)
-          ORDER BY EXTRACT(YEAR FROM s.fechaProcesada)
-        `;
-        periodoLabel = 'Año';
+        periodoQuery = serieFechasSQL;
+        periodoLabel = 'Día';
         break;
       case 'mes':
-      default:
-        periodoQuery = `
+        // Para mes, mostrar las 4 semanas del mes actual
+        serieFechasSQL = `
+          WITH semanas AS (
+            SELECT 
+              generate_series(0, 3) as num_semana
+          ),
+          stats AS (
+            SELECT 
+              s.num_semana,
+              COUNT(sol.idSolicitud) as total,
+              COUNT(sol.idSolicitud) FILTER (WHERE sol.estadoDecision = 'Aprobada') as aprobadas,
+              COUNT(sol.idSolicitud) FILTER (WHERE sol.estadoDecision = 'Rechazada') as rechazadas
+            FROM semanas s
+            LEFT JOIN Solicitud sol ON 
+              EXTRACT(WEEK FROM sol.fechaProcesada) - EXTRACT(WEEK FROM date_trunc('month', sol.fechaProcesada)) = s.num_semana AND
+              EXTRACT(MONTH FROM sol.fechaProcesada) = EXTRACT(MONTH FROM CURRENT_DATE) AND
+              EXTRACT(YEAR FROM sol.fechaProcesada) = ${yearFilter} AND
+              sol.idEmpleado = $1 AND
+              sol.fechaProcesada IS NOT NULL AND
+              sol.fechaProcesada <= ${fechaLimite}
+              ${condicionesVehiculos.length > 0 ? 'AND ' + condicionesVehiculos.map(c => c.replace(/^\w+/, 'sol.$&')).join(' AND ') : ''}
+              ${condicionesSolicitudes.length > 0 ? 'AND ' + condicionesSolicitudes.map(c => c.replace(/^\w+/, 'sol.$&')).join(' AND ') : ''}
+            GROUP BY s.num_semana
+            ORDER BY s.num_semana
+          )
           SELECT 
-            to_char(date_trunc('month', s.fechaProcesada), 'YYYY-MM') as periodo,
-            COUNT(*) as total,
-            COUNT(*) FILTER (WHERE s.estadoDecision = 'Aprobada') as aprobadas,
-            COUNT(*) FILTER (WHERE s.estadoDecision = 'Rechazada') as rechazadas
-          ${tendenciasBaseQuery}
-          AND s.fechaProcesada >= date_trunc('month', CURRENT_DATE - INTERVAL '12 months')
-          GROUP BY date_trunc('month', s.fechaProcesada)
-          ORDER BY date_trunc('month', s.fechaProcesada)
+            'Semana ' || (num_semana + 1) as periodo,
+            total,
+            aprobadas,
+            rechazadas
+          FROM stats
         `;
+        periodoQuery = serieFechasSQL;
+        periodoLabel = 'Semana';
+        break;
+      case 'año':
+      default:
+        // Para meses, generamos todos los meses del año seleccionado
+        serieFechasSQL = `
+          WITH meses AS (
+            SELECT 
+              generate_series(1, 12) as num_mes
+          ),
+          stats AS (
+            SELECT 
+              m.num_mes,
+              COUNT(s.idSolicitud) as total,
+              COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Aprobada') as aprobadas,
+              COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Rechazada') as rechazadas
+            FROM meses m
+            LEFT JOIN Solicitud s ON 
+              EXTRACT(MONTH FROM s.fechaProcesada) = m.num_mes AND
+              EXTRACT(YEAR FROM s.fechaProcesada) = ${yearFilter} AND
+              s.idEmpleado = $1 AND
+              s.fechaProcesada <= ${fechaLimite} AND
+              s.fechaProcesada IS NOT NULL
+              ${condicionesVehiculos.length > 0 ? 'AND ' + condicionesVehiculos.map(c => c.replace(/^\w+/, 's.$&')).join(' AND ') : ''}
+              ${condicionesSolicitudes.length > 0 ? 'AND ' + condicionesSolicitudes.map(c => c.replace(/^\w+/, 's.$&')).join(' AND ') : ''}
+            GROUP BY m.num_mes
+            ORDER BY m.num_mes
+          )
+          SELECT 
+            to_char(make_date(${yearFilter}, num_mes, 1), 'Mon') as periodo,
+            total,
+            aprobadas,
+            rechazadas
+          FROM stats
+        `;
+        periodoQuery = serieFechasSQL;
         periodoLabel = 'Mes';
     }
 
-    const tendenciasResult = await client.query(periodoQuery, params);
+    // Para estas consultas generadas solo necesitamos el idEmpleado como parámetro
+    const tendenciasParams = [empleadoParam]; 
+    
+    const tendenciasResult = await client.query(periodoQuery, tendenciasParams);
     const tendencias = tendenciasResult.rows.map(row => ({
       ...row,
-      aprobadas: parseInt(row.aprobadas),
-      rechazadas: parseInt(row.rechazadas),
-      total: parseInt(row.total)
+      aprobadas: parseInt(row.aprobadas || 0),
+      rechazadas: parseInt(row.rechazadas || 0),
+      total: parseInt(row.total || 0)
     }));
 
     resultado.tendencias = {
       periodoLabel,
+      año: yearFilter,
       datos: tendencias
     };
     
@@ -694,11 +824,11 @@ const getEmpleadoStatistics = async (idEmpleado, filtros = {}) => {
     // 8. Distribución por tipo de vehículo procesado
     const distribucionTipoQuery = `
       SELECT 
-        tv.nombre as tipo, 
+        v.tipoUso as tipo, 
         COUNT(*) as cantidad,
         ROUND((COUNT(*) * 100.0 / (SELECT COUNT(*) ${distribucionBaseQuery})), 2) as porcentaje
       ${distribucionBaseQuery}
-      GROUP BY tv.nombre
+      GROUP BY v.tipoUso
       ORDER BY cantidad DESC
     `;
     const distribucionTipoResult = await client.query(distribucionTipoQuery, params);
@@ -751,9 +881,21 @@ const getEmpleadoStatistics = async (idEmpleado, filtros = {}) => {
     const distribucionMunicipio = distribucionMunicipioResult.rows;
 
     resultado.distribucion = {
-      marca: distribucionMarca,
-      tipo: distribucionTipo,
-      municipio: distribucionMunicipio
+      marca: distribucionMarca.map(item => ({
+        marca: item.marca,
+        cantidad: item.cantidad.toString(),
+        porcentaje: item.porcentaje.toString()
+      })),
+      tipo: distribucionTipo.map(item => ({
+        tipo: item.tipo,
+        cantidad: item.cantidad.toString(),
+        porcentaje: item.porcentaje.toString()
+      })),
+      municipio: distribucionMunicipio.map(item => ({
+        municipio: item.municipio,
+        cantidad: item.cantidad.toString(),
+        porcentaje: item.porcentaje.toString()
+      }))
     };
     
     // Si se especificaron filtros, incluir los filtros aplicados en la respuesta
