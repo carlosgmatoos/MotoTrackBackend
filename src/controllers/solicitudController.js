@@ -1,6 +1,7 @@
 const solicitudService = require('../services/solicitudService');
 const { handleError } = require('../utils/errorHandler');
 const personaService = require('../services/personaService');
+const { uploadFile } = require('../services/uploadService');
 
 /**
  * Crear una nueva solicitud de matrícula
@@ -46,21 +47,96 @@ const crearSolicitud = async (req, res) => {
     let documentos = {};
     
     if (req.files) {
-      // Procesar cada tipo de documento
+      // Realizar subidas a Supabase para cada tipo de documento
+      const uploadPromises = [];
+      const uploadErrors = [];
+      
+      console.log(`Iniciando proceso de subida de documentos a Supabase para solicitud`);
+      
       if (req.files.cedula && req.files.cedula.length > 0) {
-        documentos.docCedula = `/uploads/cedulas/${Date.now()}-${req.files.cedula[0].originalname}`;
+        const file = req.files.cedula[0];
+        console.log(`Preparando subida de cédula: ${file.originalname}, tamaño: ${file.size} bytes`);
+        uploadPromises.push(
+          uploadFile(file.buffer, file.originalname, file.mimetype, 'cedula')
+            .then(result => {
+              if (result.error) {
+                console.error(`Error al subir cédula a Supabase:`, result.error);
+                uploadErrors.push({ type: 'cedula', error: result.error });
+              } else if (result.publicUrl) {
+                console.log(`Cédula subida exitosamente: ${result.publicUrl}`);
+                documentos.docCedula = result.publicUrl;
+              }
+              return result;
+            })
+        );
       }
       
       if (req.files.licencia && req.files.licencia.length > 0) {
-        documentos.docLicencia = `/uploads/licencias/${Date.now()}-${req.files.licencia[0].originalname}`;
+        const file = req.files.licencia[0];
+        console.log(`Preparando subida de licencia: ${file.originalname}, tamaño: ${file.size} bytes`);
+        uploadPromises.push(
+          uploadFile(file.buffer, file.originalname, file.mimetype, 'licencia')
+            .then(result => {
+              if (result.error) {
+                console.error(`Error al subir licencia a Supabase:`, result.error);
+                uploadErrors.push({ type: 'licencia', error: result.error });
+              } else if (result.publicUrl) {
+                console.log(`Licencia subida exitosamente: ${result.publicUrl}`);
+                documentos.docLicencia = result.publicUrl;
+              }
+              return result;
+            })
+        );
       }
       
       if (req.files.seguro_doc && req.files.seguro_doc.length > 0) {
-        documentos.docSeguro = `/uploads/seguros/${Date.now()}-${req.files.seguro_doc[0].originalname}`;
+        const file = req.files.seguro_doc[0];
+        console.log(`Preparando subida de seguro: ${file.originalname}, tamaño: ${file.size} bytes`);
+        uploadPromises.push(
+          uploadFile(file.buffer, file.originalname, file.mimetype, 'seguro')
+            .then(result => {
+              if (result.error) {
+                console.error(`Error al subir seguro a Supabase:`, result.error);
+                uploadErrors.push({ type: 'seguro', error: result.error });
+              } else if (result.publicUrl) {
+                console.log(`Seguro subido exitosamente: ${result.publicUrl}`);
+                documentos.docSeguro = result.publicUrl;
+              }
+              return result;
+            })
+        );
       }
       
       if (req.files.factura && req.files.factura.length > 0) {
-        documentos.docFacturaVehiculo = `/uploads/facturas/${Date.now()}-${req.files.factura[0].originalname}`;
+        const file = req.files.factura[0];
+        console.log(`Preparando subida de factura: ${file.originalname}, tamaño: ${file.size} bytes`);
+        uploadPromises.push(
+          uploadFile(file.buffer, file.originalname, file.mimetype, 'factura')
+            .then(result => {
+              if (result.error) {
+                console.error(`Error al subir factura a Supabase:`, result.error);
+                uploadErrors.push({ type: 'factura', error: result.error });
+              } else if (result.publicUrl) {
+                console.log(`Factura subida exitosamente: ${result.publicUrl}`);
+                documentos.docFacturaVehiculo = result.publicUrl;
+              }
+              return result;
+            })
+        );
+      }
+      
+      // Esperar a que todas las subidas terminen
+      console.log(`Esperando a que finalicen todas las subidas...`);
+      await Promise.all(uploadPromises);
+      console.log(`Todas las subidas finalizadas, documentos:`, documentos);
+      
+      // Verificar si hubo errores en las subidas
+      if (uploadErrors.length > 0) {
+        return res.status(500).json({
+          success: false,
+          error: 'Error en la carga de archivos',
+          details: uploadErrors.map(err => `Error al subir ${err.type}: ${err.error.message || 'Error desconocido'}`)
+        });
       }
     }
 
@@ -436,7 +512,7 @@ const obtenerSolicitudesEmpleado = async (req, res) => {
     }
     
     // Extraer filtros desde los query params
-    const { marca, modelo, estado, fechaDesde, fechaHasta, idSolicitud } = req.query;
+    const { marca, modelo, estado, fechaDesde, fechaHasta, idSolicitud, page = 1, limit = 10 } = req.query;
     
     if (!idEmpleado) {
       return res.status(400).json({
@@ -464,7 +540,9 @@ const obtenerSolicitudesEmpleado = async (req, res) => {
       if (solicitud && solicitud.empleado && solicitud.empleado.idPersona === idEmpleado) {
         return res.status(200).json({
           success: true,
-          count: 1,
+          totalItems: 1,
+          totalPages: 1,
+          currentPage: 1,
           data: [solicitud] // Devolver como array para mantener consistencia con la API
         });
       } else {
@@ -487,13 +565,15 @@ const obtenerSolicitudesEmpleado = async (req, res) => {
     if (fechaDesde) filtros.fechaDesde = fechaDesde;
     if (fechaHasta) filtros.fechaHasta = fechaHasta;
     
-    const solicitudes = await solicitudService.obtenerSolicitudesPorEmpleadoFiltradas(filtros);
+    // Paginación
+    const paginacion = {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10)
+    };
     
-    res.status(200).json({
-      success: true,
-      count: solicitudes.length,
-      data: solicitudes
-    });
+    const result = await solicitudService.obtenerSolicitudesPorEmpleadoFiltradas(filtros, paginacion);
+    
+    res.status(200).json(result);
   } catch (error) {
     handleError(res, error, 'Error al obtener solicitudes del empleado');
   }
@@ -672,13 +752,7 @@ const obtenerTodasSolicitudes = async (req, res) => {
     
     const result = await solicitudService.obtenerTodasSolicitudes(filtros, paginacion);
     
-    res.status(200).json({
-      success: true,
-      totalItems: result.total,
-      totalPages: Math.ceil(result.total / paginacion.limit),
-      currentPage: paginacion.page,
-      data: result.solicitudes
-    });
+    res.status(200).json(result);
   } catch (error) {
     handleError(res, error, 'Error al obtener solicitudes');
   }

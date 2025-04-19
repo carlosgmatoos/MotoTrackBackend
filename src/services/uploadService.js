@@ -1,6 +1,9 @@
 // src/services/uploadService.js
 const supabase = require('./supabaseClient');
 
+// Usar la variable de entorno o un nombre de bucket predeterminado
+const BUCKET_NAME = process.env.BUCKET_NAME || 'mototrack';
+
 class UploadError extends Error {
   constructor(message, code) {
     super(message);
@@ -16,17 +19,19 @@ async function uploadFile(fileBuffer, originalName, mimeType, fileType) {
     // 2. Generar nombre único y seguro
     const fileName = generateSafeFileName(folderPath, originalName);
 
+    console.log(`Intentando subir archivo a Supabase bucket ${BUCKET_NAME}: ${fileName}`);
+
     // 3. Subir a Supabase Storage con retry
     const { data, error } = await uploadWithRetry(fileName, fileBuffer, mimeType);
 
     if (error) {
-      logger.error('Error uploading to Supabase:', { error, fileName });
+      console.error('Error uploading to Supabase:', { error, fileName });
       throw new UploadError('Error al subir archivo a Supabase', 'UPLOAD_ERROR');
     }
 
     // 4. Obtener URL pública
     const { data: publicUrlData } = supabase.storage
-      .from(process.env.BUCKET_NAME)
+      .from(BUCKET_NAME)
       .getPublicUrl(fileName);
 
     return { 
@@ -35,7 +40,7 @@ async function uploadFile(fileBuffer, originalName, mimeType, fileType) {
       fileName 
     };
   } catch (error) {
-    logger.error('Upload service error:', { error, fileType });
+    console.error('Upload service error:', { error, fileType });
     return { 
       publicUrl: null, 
       error: error instanceof UploadError ? error : new UploadError('Error interno del servidor', 'INTERNAL_ERROR')
@@ -64,7 +69,7 @@ async function uploadWithRetry(fileName, fileBuffer, mimeType, maxRetries = 3) {
   for (let i = 0; i < maxRetries; i++) {
     try {
       const { data, error } = await supabase.storage
-        .from(process.env.BUCKET_NAME)
+        .from(BUCKET_NAME)
         .upload(fileName, fileBuffer, {
           contentType: mimeType,
           upsert: true

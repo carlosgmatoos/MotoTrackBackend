@@ -596,7 +596,9 @@ const obtenerSolicitudesPorCiudadano = async (idPersona, idUsuario = null, estad
       LEFT JOIN Usuario uc ON c.idUsuario = uc.idUsuario
       LEFT JOIN Usuario ue ON e.idUsuario = ue.idUsuario
       WHERE ${whereClause}
-      ORDER BY s.fechaRegistro DESC`,
+      ORDER BY 
+        CASE WHEN s.estadoDecision = 'Pendiente' THEN 0 ELSE 1 END,
+        s.fechaRegistro ASC`,
       queryParams
     );
     
@@ -674,7 +676,8 @@ const obtenerSolicitudesPorCiudadano = async (idPersona, idUsuario = null, estad
           nombres: solicitud.empleadonombres,
           apellidos: solicitud.empleadoapellidos,
           correo: solicitud.empleadocorreo
-        } : null
+        } : null,
+        enCola: false
       };
       
       // Add insurance information only if it exists
@@ -744,10 +747,9 @@ const obtenerSolicitudPorId = async (idSolicitud) => {
       return null;
     }
     
-    // Format the response to be more structured and organized
     const solicitud = result.rows[0];
     
-    // Create a structured response with all the data
+    // Formatear la respuesta como una estructura clara
     const respuesta = {
       solicitud: {
         idSolicitud: solicitud.idsolicitud,
@@ -818,7 +820,8 @@ const obtenerSolicitudPorId = async (idSolicitud) => {
         nombres: solicitud.empleadonombres,
         apellidos: solicitud.empleadoapellidos,
         correo: solicitud.empleadocorreo
-      } : null
+      } : null,
+      enCola: false
     };
     
     // Add insurance information only if it exists
@@ -833,7 +836,6 @@ const obtenerSolicitudPorId = async (idSolicitud) => {
     
     return respuesta;
   } catch (error) {
-    console.error('Error al obtener solicitud por ID:', error);
     throw error;
   }
 };
@@ -954,7 +956,8 @@ const obtenerSolicitudesPorEmpleado = async (idEmpleado) => {
           nombres: solicitud.empleadonombres,
           apellidos: solicitud.empleadoapellidos,
           correo: solicitud.empleadocorreo
-        } : null
+        } : null,
+        enCola: false
       };
       
       // Add insurance information only if it exists
@@ -1019,7 +1022,7 @@ const obtenerTodasSolicitudes = async (filtros = {}, paginacion = { page: 1, lim
     }
     
     const whereClause = queryConditions.length > 0 
-      ? `WHERE ${queryConditions.join(' AND ')}` 
+      ? queryConditions.join(' AND ')
       : '';
     
     // Contar total de resultados
@@ -1029,38 +1032,61 @@ const obtenerTodasSolicitudes = async (filtros = {}, paginacion = { page: 1, lim
       JOIN Vehiculo v ON s.idVehiculo = v.idVehiculo
       JOIN Modelo m ON v.idModelo = m.idModelo
       JOIN Marca ma ON m.idMarca = ma.idMarca
-      ${whereClause}
+      ${whereClause ? `WHERE ${whereClause}` : ''}
     `;
     
     const countResult = await client.query(countQuery, queryParams);
     const total = parseInt(countResult.rows[0].total);
     
-    // Calcular offset
+    // Calcular offset y total de páginas
     const offset = (paginacion.page - 1) * paginacion.limit;
+    const totalPages = Math.ceil(total / paginacion.limit);
     
     // Consulta paginada con todos los datos relacionados
     const query = `
       SELECT s.*, 
-        v.chasis, v.tipoUso, v.año, v.color, v.cilindraje,
+        v.chasis, v.tipoUso, v.año, v.color, v.cilindraje, v.idTipoVehiculo,
         m.idModelo, m.nombre as modeloNombre,
         ma.idMarca, ma.nombre as marcaNombre,
         mat.matriculaGenerada, mat.estado as estadoMatricula, mat.fechaEmisionMatricula,
-        c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos
+        c.idPersona as ciudadanoId, c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos, 
+        c.cedula as ciudadanoCedula, c.fechaNacimiento as ciudadanoFechaNacimiento, 
+        c.estadoCivil as ciudadanoEstadoCivil, c.sexo as ciudadanoSexo, 
+        c.telefono as ciudadanoTelefono, c.idUbicacion as ciudadanoIdUbicacion,
+        e.idPersona as empleadoId, e.nombres as empleadoNombres, e.apellidos as empleadoApellidos,
+        tv.nombre as tipoVehiculoNombre, tv.capacidad as tipoVehiculoCapacidad,
+        seg.idSeguro, seg.proveedor as seguroProveedor, seg.numeroPoliza as seguroNumeroPoliza, seg.estado as seguroEstado,
+        u.direccion as ciudadanoDireccion,
+        mun.idMunicipio, mun.nombreMunicipio,
+        prov.idProvincia, prov.nombreProvincia,
+        uc.correo as ciudadanoCorreo,
+        ue.correo as empleadoCorreo
       FROM Solicitud s
       JOIN Vehiculo v ON s.idVehiculo = v.idVehiculo
       JOIN Modelo m ON v.idModelo = m.idModelo
       JOIN Marca ma ON m.idMarca = ma.idMarca
       JOIN Matricula mat ON s.idMatricula = mat.idMatricula
       JOIN Persona c ON s.idPersona = c.idPersona
-      WHERE ${whereClause}
+      JOIN TipoVehiculo tv ON v.idTipoVehiculo = tv.idTipoVehiculo
+      LEFT JOIN Seguro seg ON v.idSeguro = seg.idSeguro
+      LEFT JOIN Persona e ON s.idEmpleado = e.idPersona
+      LEFT JOIN Ubicacion u ON c.idUbicacion = u.idUbicacion
+      LEFT JOIN Municipio mun ON u.idMunicipio = mun.idMunicipio
+      LEFT JOIN Provincia prov ON mun.idProvincia = prov.idProvincia
+      LEFT JOIN Usuario uc ON c.idUsuario = uc.idUsuario
+      LEFT JOIN Usuario ue ON e.idUsuario = ue.idUsuario
+      ${whereClause ? `WHERE ${whereClause}` : ''}
       ORDER BY 
         CASE WHEN s.estadoDecision = 'Pendiente' THEN 0 ELSE 1 END,
         s.fechaRegistro ASC
+      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `;
     
     queryParams.push(paginacion.limit, offset);
     
     const result = await client.query(query, queryParams);
+    
+    console.log(`Se encontraron ${result.rows.length} solicitudes con los filtros aplicados`);
     
     // Transformar la respuesta para tener el mismo formato estructurado que obtenerSolicitudPorId
     const solicitudes = result.rows.map(solicitud => {
@@ -1134,7 +1160,8 @@ const obtenerTodasSolicitudes = async (filtros = {}, paginacion = { page: 1, lim
           nombres: solicitud.empleadonombres,
           apellidos: solicitud.empleadoapellidos,
           correo: solicitud.empleadocorreo
-        } : null
+        } : null,
+        enCola: false
       };
       
       // Add insurance information only if it exists
@@ -1151,8 +1178,11 @@ const obtenerTodasSolicitudes = async (filtros = {}, paginacion = { page: 1, lim
     });
     
     return {
-      total,
-      solicitudes: solicitudes
+      success: true,
+      totalItems: total,
+      totalPages: totalPages,
+      currentPage: paginacion.page,
+      data: solicitudes
     };
   } catch (error) {
     throw error;
@@ -1464,7 +1494,7 @@ const generarMatricula = async () => {
 /**
  * Obtener las solicitudes asignadas a un empleado con filtros
  */
-const obtenerSolicitudesPorEmpleadoFiltradas = async (filtros) => {
+const obtenerSolicitudesPorEmpleadoFiltradas = async (filtros, paginacion = { page: 1, limit: 10 }) => {
   const client = await pool.connect();
   
   try {
@@ -1513,35 +1543,161 @@ const obtenerSolicitudesPorEmpleadoFiltradas = async (filtros) => {
     
     if (total === 0) {
       console.log(`No se encontraron solicitudes para el empleado ID: ${filtros.idEmpleado}`);
-      return [];
+      return {
+        success: true,
+        totalItems: 0,
+        totalPages: 0,
+        currentPage: paginacion.page,
+        data: []
+      };
     }
+    
+    // Calcular offset y total de páginas
+    const offset = (paginacion.page - 1) * paginacion.limit;
+    const totalPages = Math.ceil(total / paginacion.limit);
     
     const query = `
       SELECT s.*, 
-        v.chasis, v.tipoUso, v.año, v.color, v.cilindraje,
+        v.chasis, v.tipoUso, v.idTipoVehiculo, v.año, v.color, v.cilindraje, v.idTipoVehiculo,
         m.idModelo, m.nombre as modeloNombre,
         ma.idMarca, ma.nombre as marcaNombre,
         mat.matriculaGenerada, mat.estado as estadoMatricula, mat.fechaEmisionMatricula,
-        c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos
+        c.idPersona as ciudadanoId, c.nombres as ciudadanoNombres, c.apellidos as ciudadanoApellidos, 
+        c.cedula as ciudadanoCedula, c.fechaNacimiento as ciudadanoFechaNacimiento, 
+        c.estadoCivil as ciudadanoEstadoCivil, c.sexo as ciudadanoSexo, 
+        c.telefono as ciudadanoTelefono, c.idUbicacion as ciudadanoIdUbicacion,
+        e.idPersona as empleadoId, e.nombres as empleadoNombres, e.apellidos as empleadoApellidos,
+        tv.nombre as tipoVehiculoNombre, tv.capacidad as tipoVehiculoCapacidad,
+        seg.idSeguro, seg.proveedor as seguroProveedor, seg.numeroPoliza as seguroNumeroPoliza, seg.estado as seguroEstado,
+        u.direccion as ciudadanoDireccion,
+        mun.idMunicipio, mun.nombreMunicipio,
+        prov.idProvincia, prov.nombreProvincia,
+        uc.correo as ciudadanoCorreo,
+        ue.correo as empleadoCorreo
       FROM Solicitud s
       JOIN Vehiculo v ON s.idVehiculo = v.idVehiculo
       JOIN Modelo m ON v.idModelo = m.idModelo
       JOIN Marca ma ON m.idMarca = ma.idMarca
       JOIN Matricula mat ON s.idMatricula = mat.idMatricula
       JOIN Persona c ON s.idPersona = c.idPersona
-      WHERE ${whereClause}
+      JOIN TipoVehiculo tv ON v.idTipoVehiculo = tv.idTipoVehiculo
+      LEFT JOIN Seguro seg ON v.idSeguro = seg.idSeguro
+      LEFT JOIN Persona e ON s.idEmpleado = e.idPersona
+      LEFT JOIN Ubicacion u ON c.idUbicacion = u.idUbicacion
+      LEFT JOIN Municipio mun ON u.idMunicipio = mun.idMunicipio
+      LEFT JOIN Provincia prov ON mun.idProvincia = prov.idProvincia
+      LEFT JOIN Usuario uc ON c.idUsuario = uc.idUsuario
+      LEFT JOIN Usuario ue ON e.idUsuario = ue.idUsuario
+      ${whereClause ? `WHERE ${whereClause}` : ''}
       ORDER BY 
         CASE WHEN s.estadoDecision = 'Pendiente' THEN 0 ELSE 1 END,
         s.fechaRegistro ASC
+      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `;
     
-    console.log(`Ejecutando consulta con parámetros: ${JSON.stringify(queryParams)}`);
+    queryParams.push(paginacion.limit, offset);
+    
     const result = await client.query(query, queryParams);
     
     console.log(`Se encontraron ${result.rows.length} solicitudes para el empleado ID: ${filtros.idEmpleado}`);
-    return result.rows;
+    
+    // Transformar la respuesta para tener el mismo formato estructurado
+    const solicitudes = result.rows.map(solicitud => {
+      const respuesta = {
+        solicitud: {
+          idSolicitud: solicitud.idsolicitud,
+          fechaRegistro: solicitud.fecharegistro,
+          fechaProcesada: solicitud.fechaprocesada,
+          estadoDecision: solicitud.estadodecision,
+          motivoRechazo: solicitud.motivorechazo,
+          notaRevision: solicitud.notarevision,
+          detalleRechazo: solicitud.detallerechazo,
+          documentos: {
+            cedula: solicitud.doccedula,
+            licencia: solicitud.doclicencia,
+            seguro: solicitud.docseguro,
+            facturaVehiculo: solicitud.docfacturavehiculo
+          }
+        },
+        vehiculo: {
+          idVehiculo: solicitud.idvehiculo,
+          chasis: solicitud.chasis,
+          tipoUso: solicitud.tipouso,
+          año: solicitud.año,
+          color: solicitud.color,
+          cilindraje: solicitud.cilindraje,
+          modelo: {
+            idModelo: solicitud.idmodelo,
+            nombre: solicitud.modelonombre
+          },
+          marca: {
+            idMarca: solicitud.idmarca,
+            nombre: solicitud.marcanombre
+          },
+          tipoVehiculo: {
+            idTipoVehiculo: solicitud.idtipovehiculo,
+            nombre: solicitud.tipovehiculonombre,
+            capacidad: solicitud.tipovehiculocapacidad
+          }
+        },
+        matricula: {
+          idMatricula: solicitud.idmatricula,
+          matriculaGenerada: solicitud.matriculagenerada,
+          estado: solicitud.estadomatricula,
+          fechaEmision: solicitud.fechaemisionmatricula
+        },
+        ciudadano: {
+          idPersona: solicitud.ciudadanoid,
+          nombres: solicitud.ciudadanonombres,
+          apellidos: solicitud.ciudadanoapellidos,
+          cedula: solicitud.ciudadanocedula,
+          fechaNacimiento: solicitud.ciudadanofechanacimiento,
+          estadoCivil: solicitud.ciudadanoestadocivil,
+          sexo: solicitud.ciudadanosexo,
+          telefono: solicitud.ciudadanotelefono,
+          correo: solicitud.ciudadanocorreo,
+          ubicacion: solicitud.ciudadanoidubicacion ? {
+            direccion: solicitud.ciudadanodireccion,
+            municipio: {
+              idMunicipio: solicitud.idmunicipio,
+              nombre: solicitud.nombremunicipio
+            },
+            provincia: {
+              idProvincia: solicitud.idprovincia,
+              nombre: solicitud.nombreprovincia
+            }
+          } : null
+        },
+        empleado: solicitud.empleadoid ? {
+          idPersona: solicitud.empleadoid,
+          nombres: solicitud.empleadonombres,
+          apellidos: solicitud.empleadoapellidos,
+          correo: solicitud.empleadocorreo
+        } : null,
+        enCola: false
+      };
+      
+      // Add insurance information only if it exists
+      if (solicitud.idseguro) {
+        respuesta.seguro = {
+          idSeguro: solicitud.idseguro,
+          proveedor: solicitud.seguroproveedor,
+          numeroPoliza: solicitud.seguronumeropoliza,
+          estado: solicitud.seguroestado
+        };
+      }
+      
+      return respuesta;
+    });
+    
+    return {
+      success: true,
+      totalItems: total,
+      totalPages: totalPages,
+      currentPage: paginacion.page,
+      data: solicitudes
+    };
   } catch (error) {
-    // Error removed
     throw error;
   } finally {
     client.release();
