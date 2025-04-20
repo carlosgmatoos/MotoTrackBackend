@@ -1038,11 +1038,7 @@ const obtenerTodasSolicitudes = async (filtros = {}, paginacion = { page: 1, lim
     const countResult = await client.query(countQuery, queryParams);
     const total = parseInt(countResult.rows[0].total);
     
-    // Calcular offset y total de páginas
-    const offset = (paginacion.page - 1) * paginacion.limit;
-    const totalPages = Math.ceil(total / paginacion.limit);
-    
-    // Consulta paginada con todos los datos relacionados
+    // Consulta con todos los datos relacionados (sin paginación)
     const query = `
       SELECT s.*, 
         v.chasis, v.tipoUso, v.año, v.color, v.cilindraje, v.idTipoVehiculo,
@@ -1079,10 +1075,7 @@ const obtenerTodasSolicitudes = async (filtros = {}, paginacion = { page: 1, lim
       ORDER BY 
         CASE WHEN s.estadoDecision = 'Pendiente' THEN 0 ELSE 1 END,
         s.fechaRegistro ASC
-      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `;
-    
-    queryParams.push(paginacion.limit, offset);
     
     const result = await client.query(query, queryParams);
     
@@ -1180,11 +1173,10 @@ const obtenerTodasSolicitudes = async (filtros = {}, paginacion = { page: 1, lim
     return {
       success: true,
       totalItems: total,
-      totalPages: totalPages,
-      currentPage: paginacion.page,
       data: solicitudes
     };
   } catch (error) {
+    console.error('Error al obtener todas las solicitudes:', error);
     throw error;
   } finally {
     client.release();
@@ -1685,9 +1677,9 @@ const obtenerSolicitudesPorEmpleadoFiltradas = async (filtros, paginacion = { pa
           numeroPoliza: solicitud.seguronumeropoliza,
           estado: solicitud.seguroestado
         };
-      }
-      
-      return respuesta;
+    }
+    
+    return respuesta;
     });
     
     return {

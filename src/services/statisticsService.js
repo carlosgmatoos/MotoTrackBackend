@@ -299,7 +299,15 @@ const getSystemStatistics = async (filtros = {}) => {
               ORDER BY periodo
             )
             SELECT 
-              to_char(periodo, 'YYYY-MM-DD') as periodo,
+              CASE 
+                WHEN to_char(periodo, 'D')::int = 1 THEN 'Dom'
+                WHEN to_char(periodo, 'D')::int = 2 THEN 'Lun'
+                WHEN to_char(periodo, 'D')::int = 3 THEN 'Mar'
+                WHEN to_char(periodo, 'D')::int = 4 THEN 'Mié'
+                WHEN to_char(periodo, 'D')::int = 5 THEN 'Jue'
+                WHEN to_char(periodo, 'D')::int = 6 THEN 'Vie'
+                WHEN to_char(periodo, 'D')::int = 7 THEN 'Sáb'
+              END as periodo,
               total,
               pendientes,
               aprobadas,
@@ -692,7 +700,15 @@ const getEmpleadoStatistics = async (idEmpleado, filtros = {}) => {
             ORDER BY periodo
           )
           SELECT 
-            to_char(periodo, 'YYYY-MM-DD') as periodo,
+            CASE 
+              WHEN to_char(periodo, 'D')::int = 1 THEN 'Dom'
+              WHEN to_char(periodo, 'D')::int = 2 THEN 'Lun'
+              WHEN to_char(periodo, 'D')::int = 3 THEN 'Mar'
+              WHEN to_char(periodo, 'D')::int = 4 THEN 'Mié'
+              WHEN to_char(periodo, 'D')::int = 5 THEN 'Jue'
+              WHEN to_char(periodo, 'D')::int = 6 THEN 'Vie'
+              WHEN to_char(periodo, 'D')::int = 7 THEN 'Sáb'
+            END as periodo,
             total,
             aprobadas,
             rechazadas

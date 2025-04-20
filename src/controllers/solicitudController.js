@@ -2,6 +2,7 @@ const solicitudService = require('../services/solicitudService');
 const { handleError } = require('../utils/errorHandler');
 const personaService = require('../services/personaService');
 const { uploadFile } = require('../services/uploadService');
+const emailHelper = require('../utils/emailHelper');
 
 /**
  * Crear una nueva solicitud de matrícula
@@ -294,6 +295,13 @@ const crearSolicitud = async (req, res) => {
       
       if (solicitudCreada?.enCola) {
         respuesta.encola = true;
+      }
+      
+      // Intentar enviar notificación por correo (sin bloquear ni afectar el flujo principal)
+      if (req.user && req.user.idUsuario && solicitudCreada && solicitudCreada.idSolicitud) {
+        // Hacemos esto en segundo plano sin await
+        emailHelper.notificarCreacionSolicitud(solicitudCreada, req.user.idUsuario)
+          .catch(error => console.error('Error al notificar creación por correo:', error));
       }
       
       res.status(201).json({
@@ -661,6 +669,9 @@ const procesarSolicitud = async (req, res) => {
           message: `No se encontró la solicitud con ID ${idSolicitud}`
         });
       }
+
+      // Guardar esta información para la notificación posterior
+      var idPersonaCiudadano = solicitudPrevia.ciudadano?.idPersona;
     } catch (error) {
       // Ignorar error
     }
@@ -682,6 +693,20 @@ const procesarSolicitud = async (req, res) => {
       });
     }
     
+    // Intentar enviar notificación por correo (sin bloquear ni afectar el flujo principal)
+    if (idPersonaCiudadano) {
+      try {
+        const idUsuarioCiudadano = await emailHelper.obtenerIdUsuarioDePersona(idPersonaCiudadano);
+        if (idUsuarioCiudadano) {
+          emailHelper.notificarSolicitudProcesada(solicitudActualizada, idUsuarioCiudadano)
+            .catch(error => console.error('Error al notificar por correo:', error));
+        }
+      } catch (error) {
+        console.error('Error al preparar notificación por correo:', error);
+        // Continuar con la respuesta normal, no interrumpir el flujo
+      }
+    }
+    
     res.status(200).json({
       success: true,
       message: `Solicitud ${estadoDecision.toLowerCase()} exitosamente`,
@@ -699,7 +724,7 @@ const obtenerTodasSolicitudes = async (req, res) => {
   try {
     const { 
       marca, modelo, estado, idEmpleado, 
-      fechaDesde, fechaHasta, page = 1, limit = 10, idSolicitud
+      fechaDesde, fechaHasta, idSolicitud
     } = req.query;
     
     // Si se proporciona idSolicitud, obtener esa solicitud específica
@@ -720,8 +745,6 @@ const obtenerTodasSolicitudes = async (req, res) => {
         return res.status(200).json({
           success: true,
           totalItems: 1,
-          totalPages: 1,
-          currentPage: 1,
           data: [solicitud] // Devolver como array para mantener consistencia con la API
         });
       } else {
@@ -744,17 +767,12 @@ const obtenerTodasSolicitudes = async (req, res) => {
     if (fechaDesde) filtros.fechaDesde = new Date(fechaDesde);
     if (fechaHasta) filtros.fechaHasta = new Date(fechaHasta);
     
-    // Paginación
-    const paginacion = {
-      page: parseInt(page, 10),
-      limit: parseInt(limit, 10)
-    };
-    
-    const result = await solicitudService.obtenerTodasSolicitudes(filtros, paginacion);
+    // Pasar isAdmin=true para mostrar todas las solicitudes
+    const result = await solicitudService.obtenerTodasSolicitudes(filtros);
     
     res.status(200).json(result);
   } catch (error) {
-    handleError(res, error, 'Error al obtener solicitudes');
+    handleError(res, error, 'Error al obtener todas las solicitudes');
   }
 };
 
@@ -791,6 +809,18 @@ const asignarSolicitudEmpleado = async (req, res) => {
         error: 'Solicitud no encontrada o no pendiente',
         message: 'No se pudo asignar la solicitud. Verifique que la solicitud existe y está pendiente.'
       });
+    }
+    
+    // Intentar enviar notificación por correo (sin afectar el flujo principal)
+    try {
+      const idUsuarioEmpleado = await emailHelper.obtenerIdUsuarioDePersona(idEmpleado);
+      if (idUsuarioEmpleado) {
+        // No utilizar await para no bloquear la respuesta
+        emailHelper.notificarAsignacionSolicitud(solicitudAsignada, idUsuarioEmpleado)
+          .catch(error => console.error('Error al notificar asignación por correo:', error));
+      }
+    } catch (error) {
+      console.error('Error al obtener usuario de empleado para notificación:', error);
     }
     
     res.status(200).json({
