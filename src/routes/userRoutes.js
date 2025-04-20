@@ -13,16 +13,15 @@ const userRouter = express.Router();
 userRouter.post('/register', validateRegister, userValidationMiddleware.validateUserCreation, authController.register);
 userRouter.post('/login', validateLogin, authController.login);
 userRouter.post('/refresh-token', validateRefreshToken, authController.refreshToken);
-// ===== RUTAS PARA EMPLEADOS Y ADMINISTRADORES =====
 
 // Obtener listado de usuarios (con filtros)
-userRouter.get('/user', [authMiddleware, isEmpleado], userController.getUsers);
+userRouter.get('/user', [authMiddleware, isAdmin], userController.getUsers);
 
 // Obtener listado de usuarios administradores y empleados
-userRouter.get('/adminEmployees', [authMiddleware, isEmpleado], userController.getAdminAndEmployeeUsers);
+userRouter.get('/adminEmployees', [authMiddleware, isAdmin], userController.getAdminAndEmployeeUsers);
 
 // Obtener listado de empleados disponibles para asignar solicitudes
-userRouter.get('/availableEmployees', [authMiddleware, isEmpleado], userController.getAvailableEmployees);
+userRouter.get('/availableEmployees', [authMiddleware, isAdmin], userController.getAvailableEmployees);
 
 // ===== RUTAS PARA USUARIO AUTENTICADO (ciudadano) =====
 
