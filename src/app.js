@@ -23,7 +23,6 @@ const tipoVehiculoRouter = require('./routes/tipoVehiculoRoutes');
 const seguroRouter = require('./routes/seguroRoutes');
 const vehiculoRouter = require('./routes/vehiculoRoutes');
 const solicitudRouter = require('./routes/solicitudRoutes');
-const notificacionRouter = require('./routes/notificacionRoutes');
 const matriculaRouter = require('./routes/matriculaRoutes');
 const statisticsRouter = require('./routes/statisticsRoutes');
 
@@ -100,7 +99,6 @@ app.use('/api', [
   seguroRouter,
   vehiculoRouter,
   solicitudRouter,
-  notificacionRouter,
   matriculaRouter,
   statisticsRouter
 ]);

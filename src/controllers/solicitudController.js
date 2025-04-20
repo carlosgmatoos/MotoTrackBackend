@@ -304,6 +304,25 @@ const crearSolicitud = async (req, res) => {
           .catch(error => console.error('Error al notificar creación por correo:', error));
       }
       
+      // Notificar al empleado asignado automáticamente (sin bloquear ni afectar el flujo principal)
+      if (solicitudCreada && solicitudCreada.empleado && solicitudCreada.empleado.idPersona) {
+        try {
+          // Obtener el ID de usuario del empleado a partir de su ID de persona
+          const idEmpleado = solicitudCreada.empleado.idPersona;
+          const idUsuarioEmpleado = await emailHelper.obtenerIdUsuarioDePersona(idEmpleado);
+          
+          if (idUsuarioEmpleado) {
+            // Enviar notificación al empleado en segundo plano sin await
+            emailHelper.notificarAsignacionSolicitud(solicitudCreada, idUsuarioEmpleado)
+              .catch(error => console.error('Error al notificar asignación al empleado por correo:', error));
+          } else {
+            console.log(`No se pudo enviar notificación: empleado ${idEmpleado} sin usuario asociado`);
+          }
+        } catch (error) {
+          console.error('Error al notificar asignación automática por correo:', error);
+        }
+      }
+      
       res.status(201).json({
         success: true,
         message: 'Solicitud creada exitosamente',

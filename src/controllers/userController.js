@@ -518,7 +518,7 @@ const getProfileFromToken = async (req, res) => {
 const getAdminAndEmployeeUsers = async (req, res) => {
   try {
     // Extraer filtros de la consulta
-    const { id, nombres, apellidos, cedula, cargo, estado } = req.query;
+    const { id, nombres, apellidos, cedula, cargo, estado, tipoUsuario } = req.query;
     
     // Construir objeto de filtros
     const filters = {};
@@ -528,6 +528,7 @@ const getAdminAndEmployeeUsers = async (req, res) => {
     if (cedula) filters.cedula = cedula;
     if (cargo) filters.cargo = cargo;
     if (estado) filters.estado = estado;
+    if (tipoUsuario) filters.tipoUsuario = tipoUsuario;
     
     const users = await userService.getAdminAndEmployeeUsers(filters);
     
@@ -541,6 +542,23 @@ const getAdminAndEmployeeUsers = async (req, res) => {
   }
 };
 
+/**
+ * Obtener empleados disponibles para asignarles solicitudes
+ */
+const getAvailableEmployees = async (req, res) => {
+  try {
+    const users = await userService.getAvailableEmployees();
+    
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      data: users
+    });
+  } catch (error) {
+    handleError(res, error, 'Error al obtener empleados disponibles');
+  }
+};
+
 module.exports = {
   getUsers,
   createUser,
@@ -550,5 +568,6 @@ module.exports = {
   updateProfilePicture,
   changePassword,
   getProfileFromToken,
-  getAdminAndEmployeeUsers
+  getAdminAndEmployeeUsers,
+  getAvailableEmployees
 }; 

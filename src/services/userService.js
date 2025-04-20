@@ -641,11 +641,26 @@ const getAdminAndEmployeeUsers = async (filters = {}) => {
       SELECT u.*, t.nombre as tipo_usuario_nombre 
       FROM Usuario u
       LEFT JOIN TipoUsuario t ON u.idTipoUsuario = t.idTipoUsuario
-      WHERE u.idTipoUsuario IN (1, 2)
-    `;
+      WHERE `;
     
     const queryParams = [];
     let paramCounter = 1;
+    
+    // Filtrar por tipo de usuario si se especifica
+    if (filters.tipoUsuario) {
+      if (filters.tipoUsuario.toLowerCase() === 'admin' || 
+          filters.tipoUsuario.toLowerCase() === 'administrador') {
+        query += `u.idTipoUsuario = 1`;
+      } else if (filters.tipoUsuario.toLowerCase() === 'empleado') {
+        query += `u.idTipoUsuario = 2`;
+      } else {
+        // Si el valor no coincide exactamente, usar ambos tipos
+        query += `u.idTipoUsuario IN (1, 2)`;
+      }
+    } else {
+      // Si no se especifica, mostrar ambos tipos
+      query += `u.idTipoUsuario IN (1, 2)`;
+    }
     
     // Aplicar filtro de ID si existe
     if (filters.id) {
@@ -791,6 +806,115 @@ const getAdminAndEmployeeUsers = async (filters = {}) => {
   }
 };
 
+/**
+ * Obtener empleados disponibles para asignarles solicitudes
+ */
+const getAvailableEmployees = async () => {
+  try {
+    // Consulta para obtener empleados que están activos y tienen menos de 5 solicitudes pendientes
+    const query = `
+      SELECT u.*, t.nombre as tipo_usuario_nombre, p.idPersona, p.estado as estadoPersona,
+             (SELECT COUNT(*) FROM Solicitud s WHERE s.idEmpleado = p.idPersona AND s.estadoDecision = 'Pendiente') as solicitudesPendientes
+      FROM Usuario u
+      JOIN TipoUsuario t ON u.idTipoUsuario = t.idTipoUsuario
+      JOIN Persona p ON u.idUsuario = p.idUsuario
+      WHERE u.idTipoUsuario = 2 -- Solo empleados
+            AND u.estado = 'activo' -- Usuario activo
+            AND p.estado = 'activo' -- Persona activa
+    `;
+    
+    const result = await pool.query(query);
+    
+    // Procesar cada usuario para incluir información adicional
+    const usersPromises = result.rows.map(async user => {
+      const userData = {
+        id: user.idusuario,
+        nombres: user.nombres,
+        apellidos: user.apellidos,
+        correo: user.correo,
+        estado: user.estado,
+        fechaCreacion: user.fechacreacion,
+        ftPerfil: user.ftperfil,
+        idPersona: user.idpersona,
+        solicitudesPendientes: parseInt(user.solicitudespendientes),
+        disponible: parseInt(user.solicitudespendientes) < 5,
+        tipoUsuario: {
+          id: user.idtipousuario,
+          nombre: user.tipo_usuario_nombre
+        }
+      };
+      
+      // Obtener datos de persona
+      let personaQuery = `
+        SELECT p.*, tp.nombre as tipo_persona_nombre,
+        u.direccion, m.nombreMunicipio, m.idMunicipio, pr.nombreProvincia, pr.idProvincia
+        FROM Persona p
+        LEFT JOIN TipoPersona tp ON p.idTipoPersona = tp.idTipoPersona
+        LEFT JOIN Ubicacion u ON p.idUbicacion = u.idUbicacion
+        LEFT JOIN Municipio m ON u.idMunicipio = m.idMunicipio
+        LEFT JOIN Provincia pr ON m.idProvincia = pr.idProvincia
+        WHERE p.idPersona = $1
+      `;
+      
+      const personaResult = await pool.query(personaQuery, [userData.idPersona]);
+      
+      if (personaResult.rows.length > 0) {
+        const persona = personaResult.rows[0];
+        userData.datosPersonales = {
+          idPersona: persona.idpersona,
+          cedula: persona.cedula,
+          fechaNacimiento: persona.fechanacimiento,
+          estadoCivil: persona.estadocivil,
+          sexo: persona.sexo,
+          telefono: persona.telefono,
+          tipoPersona: {
+            id: persona.idtipopersona,
+            nombre: persona.tipo_persona_nombre
+          },
+          ubicacion: persona.direccion ? {
+            id: persona.idubicacion,
+            direccion: persona.direccion,
+            municipio: {
+              id: persona.idmunicipio,
+              nombre: persona.nombremunicipio
+            },
+            provincia: {
+              id: persona.idprovincia,
+              nombre: persona.nombreprovincia
+            }
+          } : null
+        };
+      }
+      
+      // Obtener permisos
+      const tipoResult = await pool.query(
+        'SELECT * FROM TipoUsuario WHERE idTipoUsuario = $1',
+        [userData.tipoUsuario.id]
+      );
+      
+      if (tipoResult.rows.length > 0) {
+        const tipoUsuario = tipoResult.rows[0];
+        userData.permisos = {
+          crear: tipoUsuario.podercrear,
+          editar: tipoUsuario.podereditar,
+          eliminar: tipoUsuario.podereliminar
+        };
+        userData.role = tipoUsuario.nombre.toLowerCase();
+      }
+      
+      return userData;
+    });
+    
+    // Esperar a que todas las promesas se resuelvan
+    const users = await Promise.all(usersPromises);
+    
+    return users;
+  } catch (error) {
+    console.error('Error al obtener empleados disponibles:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   getUsers,
   authenticateUser,
@@ -800,5 +924,6 @@ module.exports = {
   getUserById,
   updateUserProfile,
   changePassword,
-  getAdminAndEmployeeUsers
+  getAdminAndEmployeeUsers,
+  getAvailableEmployees
 };

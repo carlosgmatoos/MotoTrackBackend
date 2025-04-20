@@ -6,11 +6,8 @@
 const emailService = require('../services/emailService');
 const { pool } = require('../db');
 
-/**
- * Obtiene el correo electrónico de un usuario
- * @param {Number} idUsuario - ID del usuario
- * @returns {Promise<String|null>} - Correo electrónico o null si no se encuentra
- */
+// Obtiene el correo electrónico de un usuario
+
 const obtenerEmailUsuario = async (idUsuario) => {
   if (!idUsuario) return null;
   
@@ -27,12 +24,8 @@ const obtenerEmailUsuario = async (idUsuario) => {
   }
 };
 
-/**
- * Intenta enviar una notificación por correo cuando se crea una solicitud
- * Esta función es segura y no interferirá con el flujo principal
- * @param {Object} solicitud - Datos de la solicitud creada
- * @param {Number} idUsuario - ID del usuario que creó la solicitud
- */
+// Intenta enviar una notificación por correo cuando se crea una solicitud
+
 const notificarCreacionSolicitud = async (solicitud, idUsuario) => {
   if (!solicitud || !idUsuario) return;
   
@@ -51,11 +44,8 @@ const notificarCreacionSolicitud = async (solicitud, idUsuario) => {
   }
 };
 
-/**
- * Intenta enviar una notificación por correo cuando se asigna una solicitud
- * @param {Object} solicitud - Datos de la solicitud asignada
- * @param {Number} idUsuarioEmpleado - ID del usuario empleado
- */
+// Intenta enviar una notificación por correo cuando se asigna una solicitud
+
 const notificarAsignacionSolicitud = async (solicitud, idUsuarioEmpleado) => {
   if (!solicitud || !idUsuarioEmpleado) return;
   
@@ -73,11 +63,8 @@ const notificarAsignacionSolicitud = async (solicitud, idUsuarioEmpleado) => {
   }
 };
 
-/**
- * Obtiene los datos completos de un usuario para la notificación
- * @param {Number} idUsuario - ID del usuario
- * @returns {Promise<Object|null>} - Datos del usuario o null si no se encuentra
- */
+// Obtiene los datos completos de un usuario para la notificación
+
 const obtenerDatosUsuario = async (idUsuario) => {
   if (!idUsuario) return null;
   
@@ -102,12 +89,8 @@ const obtenerDatosUsuario = async (idUsuario) => {
   }
 };
 
-/**
- * Notifica al ciudadano sobre el procesamiento de su solicitud (aprobada o rechazada)
- * @param {Object} solicitud - Objeto de solicitud con información actualizada
- * @param {number} idUsuario - ID del usuario a notificar
- * @returns {Promise<Object>} - Resultado del envío
- */
+// Notifica al ciudadano sobre el procesamiento de su solicitud (aprobada o rechazada)  
+
 const notificarSolicitudProcesada = async (solicitud, idUsuario) => {
   try {
     // Obtener datos del usuario
@@ -125,11 +108,8 @@ const notificarSolicitudProcesada = async (solicitud, idUsuario) => {
   }
 };
 
-/**
- * Obtiene el ID de usuario asociado a una persona
- * @param {Number} idPersona - ID de la persona
- * @returns {Promise<Number|null>} - ID del usuario o null si no se encuentra
- */
+// Obtiene el ID de usuario asociado a una persona
+
 const obtenerIdUsuarioDePersona = async (idPersona) => {
   if (!idPersona) return null;
   

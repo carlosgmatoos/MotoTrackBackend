@@ -21,6 +21,8 @@ userRouter.get('/user', [authMiddleware, isEmpleado], userController.getUsers);
 // Obtener listado de usuarios administradores y empleados
 userRouter.get('/adminEmployees', [authMiddleware, isEmpleado], userController.getAdminAndEmployeeUsers);
 
+// Obtener listado de empleados disponibles para asignar solicitudes
+userRouter.get('/availableEmployees', [authMiddleware, isEmpleado], userController.getAvailableEmployees);
 
 // ===== RUTAS PARA USUARIO AUTENTICADO (ciudadano) =====
 

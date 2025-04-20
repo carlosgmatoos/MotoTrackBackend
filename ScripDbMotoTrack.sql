@@ -137,12 +137,3 @@ CREATE TABLE Solicitud (
     fechaRegistro DATE DEFAULT CURRENT_DATE,
     fechaProcesada TIMESTAMP
 );
-
-CREATE TABLE Notificaciones (
-    idNotificacion SERIAL PRIMARY KEY,
-    mensaje TEXT NOT NULL,
-    titulo VARCHAR(75) NOT NULL,
-    estado VARCHAR(15) CHECK (estado IN ('Pendiente', 'Enviada', 'Leida', 'Confirmada', 'Cancelada', 'Error')),
-    fechaCreacion DATE DEFAULT CURRENT_DATE,
-    idUsuario INT REFERENCES Usuario(idUsuario)
-);

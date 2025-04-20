@@ -5333,6 +5333,12 @@ paths:
           schema:
             type: string
             enum: [activo, inactivo, deshabilitado]
+        - name: tipoUsuario
+          in: query
+          description: Filtrar por tipo de usuario (admin o empleado)
+          schema:
+            type: string
+            enum: [administrador, empleado]
       responses:
         '200':
           description: Lista de administradores y empleados obtenida exitosamente
@@ -5340,6 +5346,159 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminEmployeeUsersResponse'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Acceso prohibido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+  /availableEmployees:
+    get:
+      tags:
+        - Usuarios
+      summary: Obtener empleados disponibles para asignar solicitudes
+      description: Obtiene una lista de empleados que están disponibles para asignarles solicitudes (tienen menos de 5 solicitudes pendientes y están activos)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de empleados disponibles obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  count:
+                    type: integer
+                    description: Número total de empleados disponibles
+                    example: 3
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: ID del usuario
+                          example: 5
+                        nombres:
+                          type: string
+                          description: Nombres del empleado
+                          example: "Juan Carlos"
+                        apellidos:
+                          type: string
+                          description: Apellidos del empleado
+                          example: "Pérez Rodríguez"
+                        correo:
+                          type: string
+                          description: Correo electrónico
+                          example: "juan.perez@example.com"
+                        estado:
+                          type: string
+                          description: Estado del usuario
+                          example: "activo"
+                        fechaCreacion:
+                          type: string
+                          format: date-time
+                          description: Fecha de creación del usuario
+                          example: "2023-03-15T10:30:00Z"
+                        ftPerfil:
+                          type: string
+                          description: URL o Base64 de la foto de perfil
+                          nullable: true
+                        idPersona:
+                          type: integer
+                          description: ID de la persona asociada
+                          example: 8
+                        solicitudesPendientes:
+                          type: integer
+                          description: Número de solicitudes pendientes asignadas
+                          example: 2
+                        disponible:
+                          type: boolean
+                          description: Indica si el empleado está disponible para más solicitudes
+                          example: true
+                        tipoUsuario:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              description: ID del tipo de usuario
+                              example: 2
+                            nombre:
+                              type: string
+                              description: Nombre del tipo de usuario
+                              example: "Empleado"
+                        datosPersonales:
+                          type: object
+                          properties:
+                            idPersona:
+                              type: integer
+                              description: ID de la persona
+                              example: 8
+                            cedula:
+                              type: string
+                              description: Número de cédula
+                              example: "012-3456789-0"
+                            fechaNacimiento:
+                              type: string
+                              format: date
+                              description: Fecha de nacimiento
+                              example: "1985-05-20"
+                            estadoCivil:
+                              type: string
+                              description: Estado civil
+                              example: "Soltero"
+                            sexo:
+                              type: string
+                              description: Sexo
+                              example: "M"
+                            telefono:
+                              type: string
+                              description: Número de teléfono
+                              example: "809-555-1234"
+                            tipoPersona:
+                              type: object
+                              properties:
+                                id:
+                                  type: integer
+                                  description: ID del tipo de persona
+                                  example: 2
+                                nombre:
+                                  type: string
+                                  description: Nombre o cargo del tipo de persona
+                                  example: "Oficial"
+                        permisos:
+                          type: object
+                          properties:
+                            crear:
+                              type: boolean
+                              description: Permiso para crear
+                              example: true
+                            editar:
+                              type: boolean
+                              description: Permiso para editar
+                              example: true
+                            eliminar:
+                              type: boolean
+                              description: Permiso para eliminar
+                              example: false
         '401':
           description: No autorizado
           content:
