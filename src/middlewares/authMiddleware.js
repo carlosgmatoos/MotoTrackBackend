@@ -62,7 +62,6 @@ const authMiddleware = async (req, res, next) => {
               idTipoPersona: personaData.idtipopersona,
               tipoPersonaNombre: personaData.tipopersonanombre
             };
-            console.log(`Datos de persona añadidos al usuario: ${personaData.idpersona}`);
           }
         } catch (error) {
           console.error('Error al obtener datos de persona:', error);

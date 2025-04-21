@@ -26,7 +26,6 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
       if (personaUsuarioResult.rows.length > 0) {
         // El usuario ya tiene una persona asociada, usamos esa
         idCiudadano = personaUsuarioResult.rows[0].idpersona;
-        console.log(`Usuario ${datosPropietario.idUsuario} ya tiene persona asociada: ${idCiudadano}. Actualizando datos.`);
         
         // Verificar límite de vehículos
         const { alcanzadoLimite, cantidadVehiculos } = await verificarLimiteVehiculosCiudadano(idCiudadano);
@@ -45,7 +44,6 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
         if (datosPropietario.cedula) {
           updateFields.push(`cedula = $${++paramIndex}`);
           updateParams.splice(paramIndex-1, 0, datosPropietario.cedula);
-          console.log(`Actualizando cédula de persona ${idCiudadano} a: ${datosPropietario.cedula}`);
         }
         
         if (datosPropietario.nombres) {
@@ -98,7 +96,6 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
           try {
             const updateQuery = `UPDATE Persona SET ${updateFields.join(', ')} WHERE idPersona = $1`;
             await client.query(updateQuery, updateParams);
-            console.log(`Persona ${idCiudadano} actualizada con éxito`);
           } catch (error) {
             // Si hay un error por duplicidad de cédula, manejarlo de forma más amigable
             if (error.code === '23505' && error.constraint.includes('cedula')) {
@@ -112,14 +109,12 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
               
               if (personaPorCedulaResult.rows.length > 0) {
                 const personaConCedula = personaPorCedulaResult.rows[0];
-                console.log(`La cédula ${datosPropietario.cedula} pertenece a la persona ID: ${personaConCedula.idpersona}`);
                 
                 // Si esa persona no tiene usuario, podríamos vincularla
                 if (!personaConCedula.idusuario && datosPropietario.idUsuario) {
                   await verificarRelacionUsuarioPersona(client, datosPropietario.idUsuario, personaConCedula.idpersona);
                   // Usar esta persona en lugar de la original
                   idCiudadano = personaConCedula.idpersona;
-                  console.log(`Reasignando solicitud a la persona ID: ${idCiudadano} con la cédula solicitada`);
                 }
               }
             } else {
@@ -140,8 +135,6 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
           
           // Verificar y corregir la relación usuario-persona
           await verificarRelacionUsuarioPersona(client, datosPropietario.idUsuario, idCiudadano);
-          
-          console.log(`Vinculando usuario ${datosPropietario.idUsuario} con persona existente ${idCiudadano}`);
           
           // Verificar límite de vehículos
           const { alcanzadoLimite, cantidadVehiculos } = await verificarLimiteVehiculosCiudadano(idCiudadano);
@@ -174,7 +167,6 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
                 idCiudadano
               ]
             );
-            console.log(`Persona ${idCiudadano} actualizada con cédula ${datosPropietario.cedula || 'sin cambios'}`);
           } catch (error) {
             // Si hay un error por duplicidad de cédula, registrarlo pero continuar
             if (error.code === '23505' && error.constraint.includes('cedula')) {
@@ -184,8 +176,6 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
             }
           }
         } else {
-          // No existe persona con esta cédula, crear una nueva
-          console.log(`Creando nueva persona para usuario ${datosPropietario.idUsuario}`);
           
           // Crear ubicación si se proporcionan datos
           let idUbicacion = null;
@@ -223,7 +213,6 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
           );
           
           idCiudadano = newPersonaResult.rows[0].idpersona;
-          console.log(`Persona ${idCiudadano} creada y vinculada al usuario ${datosPropietario.idUsuario}`);
         }
       }
     } else {
@@ -236,7 +225,6 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
       if (personaResult.rows.length > 0) {
         // Existe una persona con esta cédula
         idCiudadano = personaResult.rows[0].idpersona;
-        console.log(`Usando persona existente con ID ${idCiudadano}`);
         
         // Verificar límite de vehículos
         const { alcanzadoLimite, cantidadVehiculos } = await verificarLimiteVehiculosCiudadano(idCiudadano);
@@ -269,7 +257,6 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
               idCiudadano
             ]
           );
-          console.log(`Persona ${idCiudadano} actualizada con cédula ${datosPropietario.cedula || 'sin cambios'}`);
         } catch (error) {
           // Si hay un error por duplicidad de cédula, registrarlo pero continuar
           if (error.code === '23505' && error.constraint.includes('cedula')) {
@@ -279,8 +266,6 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
           }
         }
       } else {
-        // No existe persona con esta cédula, crear una nueva
-        console.log('Creando nueva persona sin usuario asociado');
         
         // Crear ubicación si se proporcionan datos
         let idUbicacion = null;
@@ -318,7 +303,6 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
         );
         
         idCiudadano = newPersonaResult.rows[0].idpersona;
-        console.log(`Persona ${idCiudadano} creada sin usuario asociado`);
       }
     }
     
@@ -469,12 +453,10 @@ const crearSolicitud = async (datosVehiculo, datosPropietario, seguro, documento
       const solicitudCompleta = await obtenerSolicitudPorId(solicitudResult.rows[0].idsolicitud);
       
       if (!solicitudCompleta) {
-        console.log('No se pudo obtener la solicitud completa en el primer intento, reintentando...');
         await new Promise(resolve => setTimeout(resolve, 500));
         const reintentoSolicitud = await obtenerSolicitudPorId(solicitudResult.rows[0].idsolicitud);
         
         if (!reintentoSolicitud) {
-          console.log('No se pudo obtener la solicitud completa después de reintentar');
           return { idVehiculo, idMatricula, enCola };
         }
         
@@ -526,7 +508,6 @@ const obtenerIdUsuario = async (client, idPersona) => {
 const obtenerSolicitudesPorCiudadano = async (idPersona, idUsuario = null, estado = null) => {
   const client = await pool.connect();
   try {
-    console.log(`Iniciando búsqueda de solicitudes - Persona ID: ${idPersona}, Usuario ID: ${idUsuario}, Estado: ${estado || 'Todos'}`);
     
     // Si no tenemos idPersona pero tenemos idUsuario, buscar la persona asociada
     if (!idPersona && idUsuario) {
@@ -537,20 +518,15 @@ const obtenerSolicitudesPorCiudadano = async (idPersona, idUsuario = null, estad
       
       if (personaResult.rows.length > 0) {
         idPersona = personaResult.rows[0].idpersona;
-        console.log(`Se encontró la persona ID ${idPersona} asociada al usuario ID ${idUsuario}`);
       } else {
-        console.log(`No se encontró ninguna persona asociada al usuario ID ${idUsuario}`);
         return []; // No hay persona asociada, no puede tener solicitudes
       }
     }
     
     // Si seguimos sin tener idPersona, no podemos buscar solicitudes
     if (!idPersona) {
-      console.log('No se puede buscar solicitudes sin ID de persona');
       return [];
     }
-    
-    console.log(`Buscando solicitudes para la persona ID ${idPersona}`);
     
     // Preparar parámetros y consulta base
     let queryParams = [idPersona];
@@ -601,8 +577,6 @@ const obtenerSolicitudesPorCiudadano = async (idPersona, idUsuario = null, estad
         s.fechaRegistro ASC`,
       queryParams
     );
-    
-    console.log(`Se encontraron ${result.rows.length} solicitudes para la persona ID ${idPersona}`);
     
     // Transformar la respuesta para tener el mismo formato estructurado que obtenerSolicitudPorId
     const solicitudes = result.rows.map(solicitud => {
@@ -1079,8 +1053,6 @@ const obtenerTodasSolicitudes = async (filtros = {}, paginacion = { page: 1, lim
     
     const result = await client.query(query, queryParams);
     
-    console.log(`Se encontraron ${result.rows.length} solicitudes con los filtros aplicados`);
-    
     // Transformar la respuesta para tener el mismo formato estructurado que obtenerSolicitudPorId
     const solicitudes = result.rows.map(solicitud => {
       const respuesta = {
@@ -1311,7 +1283,6 @@ const procesarSolicitud = async ({ idSolicitud, idEmpleado, estadoDecision, nota
     );
     
     if (solicitudResult.rows.length === 0) {
-      console.log(`No se encontró una solicitud pendiente con ID ${idSolicitud}`);
       return null; // No existe o no está pendiente
     }
     
@@ -1331,12 +1302,8 @@ const procesarSolicitud = async ({ idSolicitud, idEmpleado, estadoDecision, nota
       const esAdmin = esAdminResult.rows.length > 0 && esAdminResult.rows[0].idtipousuario === 1;
       
       if (!esAdmin) {
-        console.log(`La solicitud ${idSolicitud} no está asignada al empleado ${idEmpleado}`);
-        console.log(`Está asignada a: ${solicitud.idempleado}`);
         return null; // No está asignada a este empleado
-      } else {
-        console.log(`Empleado ${idEmpleado} es administrador, permitiendo procesamiento`);
-      }
+      } 
     }
     
     if (estadoDecision === 'Aprobada') {
@@ -1426,7 +1393,6 @@ const procesarSolicitud = async ({ idSolicitud, idEmpleado, estadoDecision, nota
     try {
       // Devolver la solicitud actualizada
       const solicitudActualizada = await obtenerSolicitudPorId(idSolicitud);
-      console.log(`Solicitud ${idSolicitud} procesada exitosamente como ${estadoDecision}`);
       return solicitudActualizada;
     } catch (error) {
       return {
@@ -1490,7 +1456,6 @@ const obtenerSolicitudesPorEmpleadoFiltradas = async (filtros, paginacion = { pa
   const client = await pool.connect();
   
   try {
-    console.log(`Buscando solicitudes para empleado ID: ${filtros.idEmpleado} con filtros: ${JSON.stringify(filtros)}`);
     
     let queryParams = [filtros.idEmpleado];
     let queryConditions = ['s.idEmpleado = $1'];
@@ -1534,7 +1499,6 @@ const obtenerSolicitudesPorEmpleadoFiltradas = async (filtros, paginacion = { pa
     const total = parseInt(countResult.rows[0].total);
     
     if (total === 0) {
-      console.log(`No se encontraron solicitudes para el empleado ID: ${filtros.idEmpleado}`);
       return {
         success: true,
         totalItems: 0,
@@ -1590,8 +1554,6 @@ const obtenerSolicitudesPorEmpleadoFiltradas = async (filtros, paginacion = { pa
     queryParams.push(paginacion.limit, offset);
     
     const result = await client.query(query, queryParams);
-    
-    console.log(`Se encontraron ${result.rows.length} solicitudes para el empleado ID: ${filtros.idEmpleado}`);
     
     // Transformar la respuesta para tener el mismo formato estructurado
     const solicitudes = result.rows.map(solicitud => {
@@ -1702,7 +1664,6 @@ const obtenerSolicitudesPorEmpleadoFiltradas = async (filtros, paginacion = { pa
  */
 const verificarRelacionUsuarioPersona = async (client, idUsuario, idPersona) => {
   if (!idUsuario || !idPersona) {
-    console.log('No se puede verificar relación sin IDs de usuario y persona');
     return false;
   }
   
@@ -1719,14 +1680,12 @@ const verificarRelacionUsuarioPersona = async (client, idUsuario, idPersona) => 
       
       // Si la persona actual ya está en la lista, no necesitamos hacer nada más
       if (personasAsociadas.includes(idPersona)) {
-        console.log(`La relación entre usuario ${idUsuario} y persona ${idPersona} ya existe y es correcta`);
         return true;
       }
       
       // Eliminar relaciones existentes (excepto con la persona actual)
       for (const otraIdPersona of personasAsociadas) {
         if (otraIdPersona !== idPersona) {
-          console.log(`Eliminando relación existente entre usuario ${idUsuario} y persona ${otraIdPersona}`);
           await client.query(
             'UPDATE Persona SET idUsuario = NULL WHERE idPersona = $1',
             [otraIdPersona]
@@ -1745,7 +1704,6 @@ const verificarRelacionUsuarioPersona = async (client, idUsuario, idPersona) => 
     
     // Si la persona ya está relacionada con otro usuario diferente, actualizar
     if (usuarioActual && usuarioActual !== idUsuario) {
-      console.log(`Actualizando relación: persona ${idPersona} cambia de usuario ${usuarioActual} a ${idUsuario}`);
     }
     
     // 3. Establecer la relación correcta
@@ -1754,7 +1712,6 @@ const verificarRelacionUsuarioPersona = async (client, idUsuario, idPersona) => 
       [idUsuario, idPersona]
     );
     
-    console.log(`Relación establecida correctamente: usuario ${idUsuario} -> persona ${idPersona}`);
     return true;
   } catch (error) {
     console.error('Error al verificar/corregir relación usuario-persona:', error);
@@ -1762,11 +1719,7 @@ const verificarRelacionUsuarioPersona = async (client, idUsuario, idPersona) => 
   }
 };
 
-/**
- * Verificar si un ciudadano ha alcanzado el límite de vehículos permitidos (2)
- * @param {number} idCiudadano - ID de la persona ciudadano
- * @returns {Promise<{alcanzadoLimite: boolean, cantidadVehiculos: number}>} - Resultado de la verificación
- */
+// Verificar si un ciudadano ha alcanzado el límite de vehículos permitidos (2)
 const verificarLimiteVehiculosCiudadano = async (idCiudadano) => {
   const client = await pool.connect();
   try {
@@ -1785,9 +1738,6 @@ const verificarLimiteVehiculosCiudadano = async (idCiudadano) => {
     
     const cantidadVehiculos = parseInt(result.rows[0].total, 10);
     const limiteAlcanzado = cantidadVehiculos >= 2;
-    
-    console.log(`Ciudadano ID ${idCiudadano} tiene ${cantidadVehiculos} vehículos activos con matrícula generada`);
-    console.log(`¿Ha alcanzado el límite de 2 vehículos?: ${limiteAlcanzado ? 'SÍ' : 'NO'}`);
     
     return {
       alcanzadoLimite: limiteAlcanzado,

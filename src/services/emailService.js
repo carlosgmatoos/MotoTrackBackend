@@ -22,7 +22,6 @@ const getTransporter = () => {
         }
       });
       
-      console.log('Transportador de correo inicializado con OAuth2');
     } else {
       // Fallback a autenticación simple (para retrocompatibilidad)
       transporter = nodemailer.createTransport({
@@ -33,7 +32,6 @@ const getTransporter = () => {
         }
       });
       
-      console.log('Transportador de correo inicializado con autenticación simple');
     }
   }
   return transporter;
@@ -56,7 +54,6 @@ const enviarCorreo = async (options) => {
     };
 
     const resultado = await getTransporter().sendMail(mailOptions);
-    console.log('Correo enviado exitosamente a', options.to);
     return { success: true, messageId: resultado.messageId };
   } catch (error) {
     console.error('Error al enviar correo:', error);
@@ -64,14 +61,6 @@ const enviarCorreo = async (options) => {
   }
 };
 
-/**
- * Genera una plantilla HTML para las notificaciones
- * @param {Object} datos - Datos para la plantilla
- * @param {string} datos.titulo - Título de la notificación
- * @param {string} datos.mensaje - Mensaje principal
- * @param {string} datos.tipo - Tipo de notificación (solicitud, aprobacion, rechazo, asignacion)
- * @param {Object} datos.detalles - Detalles adicionales (opcional)
- */
 const generarPlantilla = (datos) => {
   // Paleta de colores sofisticada
   const colores = {
@@ -500,11 +489,8 @@ const notificarAsignacionSolicitud = async (solicitud, emailEmpleado) => {
   });
 };
 
-/**
- * Envía una notificación por correo cuando una solicitud es procesada
- * @param {Object} solicitud - Datos de la solicitud procesada
- * @param {string} emailDestinatario - Correo del ciudadano
- */
+// Envía una notificación por correo cuando una solicitud es procesada
+
 const notificarSolicitudProcesada = async (solicitud, emailDestinatario) => {
   if (!emailDestinatario) return { success: false, error: 'No se proporcionó un email' };
   

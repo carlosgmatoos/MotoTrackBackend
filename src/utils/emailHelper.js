@@ -32,12 +32,10 @@ const notificarCreacionSolicitud = async (solicitud, idUsuario) => {
   try {
     const email = await obtenerEmailUsuario(idUsuario);
     if (!email) {
-      console.log(`No se pudo enviar notificación: usuario ${idUsuario} sin correo`);
       return;
     }
     
     await emailService.notificarNuevaSolicitud(solicitud, email);
-    console.log(`Notificación de creación enviada al usuario ${idUsuario} (${email})`);
   } catch (error) {
     // No interrumpir el flujo principal si falla
     console.error('Error al enviar notificación de creación:', error);
@@ -52,12 +50,10 @@ const notificarAsignacionSolicitud = async (solicitud, idUsuarioEmpleado) => {
   try {
     const email = await obtenerEmailUsuario(idUsuarioEmpleado);
     if (!email) {
-      console.log(`No se pudo enviar notificación: empleado ${idUsuarioEmpleado} sin correo`);
       return;
     }
     
     await emailService.notificarAsignacionSolicitud(solicitud, email);
-    console.log(`Notificación de asignación enviada al empleado ${idUsuarioEmpleado} (${email})`);
   } catch (error) {
     console.error('Error al enviar notificación de asignación:', error);
   }
@@ -96,7 +92,6 @@ const notificarSolicitudProcesada = async (solicitud, idUsuario) => {
     // Obtener datos del usuario
     const usuario = await obtenerDatosUsuario(idUsuario);
     if (!usuario || !usuario.email) {
-      console.log('No se pudo enviar notificación: usuario o email no encontrado');
       return null;
     }
 

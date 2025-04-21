@@ -19,8 +19,6 @@ async function uploadFile(fileBuffer, originalName, mimeType, fileType) {
     // 2. Generar nombre único y seguro
     const fileName = generateSafeFileName(folderPath, originalName);
 
-    console.log(`Intentando subir archivo a Supabase bucket ${BUCKET_NAME}: ${fileName}`);
-
     // 3. Subir a Supabase Storage con retry
     const { data, error } = await uploadWithRetry(fileName, fileBuffer, mimeType);
 

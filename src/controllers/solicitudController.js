@@ -3,6 +3,8 @@ const { handleError } = require('../utils/errorHandler');
 const personaService = require('../services/personaService');
 const { uploadFile } = require('../services/uploadService');
 const emailHelper = require('../utils/emailHelper');
+const statisticsService = require('../services/statisticsService');
+// Eliminar la línea comentada del statsHelper que ya no se usará
 
 /**
  * Crear una nueva solicitud de matrícula
@@ -34,14 +36,11 @@ const crearSolicitud = async (req, res) => {
     if (req.user) {
       // Asignar el ID del usuario autenticado (puede estar en id o idUsuario)
       persona.idUsuario = req.user.id || req.user.idUsuario;
-      console.log(`Asociando solicitud al usuario autenticado: ${persona.idUsuario}`);
       
       // También agregar correo si está disponible y no se proporcionó
       if (req.user.correo && !persona.correo) {
         persona.correo = req.user.correo;
       }
-    } else {
-      console.log('No hay usuario autenticado para asociar a la solicitud');
     }
     
     // Procesar archivos y obtener URLs
@@ -52,11 +51,8 @@ const crearSolicitud = async (req, res) => {
       const uploadPromises = [];
       const uploadErrors = [];
       
-      console.log(`Iniciando proceso de subida de documentos a Supabase para solicitud`);
-      
       if (req.files.cedula && req.files.cedula.length > 0) {
         const file = req.files.cedula[0];
-        console.log(`Preparando subida de cédula: ${file.originalname}, tamaño: ${file.size} bytes`);
         uploadPromises.push(
           uploadFile(file.buffer, file.originalname, file.mimetype, 'cedula')
             .then(result => {
@@ -64,7 +60,6 @@ const crearSolicitud = async (req, res) => {
                 console.error(`Error al subir cédula a Supabase:`, result.error);
                 uploadErrors.push({ type: 'cedula', error: result.error });
               } else if (result.publicUrl) {
-                console.log(`Cédula subida exitosamente: ${result.publicUrl}`);
                 documentos.docCedula = result.publicUrl;
               }
               return result;
@@ -74,7 +69,6 @@ const crearSolicitud = async (req, res) => {
       
       if (req.files.licencia && req.files.licencia.length > 0) {
         const file = req.files.licencia[0];
-        console.log(`Preparando subida de licencia: ${file.originalname}, tamaño: ${file.size} bytes`);
         uploadPromises.push(
           uploadFile(file.buffer, file.originalname, file.mimetype, 'licencia')
             .then(result => {
@@ -82,7 +76,6 @@ const crearSolicitud = async (req, res) => {
                 console.error(`Error al subir licencia a Supabase:`, result.error);
                 uploadErrors.push({ type: 'licencia', error: result.error });
               } else if (result.publicUrl) {
-                console.log(`Licencia subida exitosamente: ${result.publicUrl}`);
                 documentos.docLicencia = result.publicUrl;
               }
               return result;
@@ -92,7 +85,6 @@ const crearSolicitud = async (req, res) => {
       
       if (req.files.seguro_doc && req.files.seguro_doc.length > 0) {
         const file = req.files.seguro_doc[0];
-        console.log(`Preparando subida de seguro: ${file.originalname}, tamaño: ${file.size} bytes`);
         uploadPromises.push(
           uploadFile(file.buffer, file.originalname, file.mimetype, 'seguro')
             .then(result => {
@@ -100,7 +92,6 @@ const crearSolicitud = async (req, res) => {
                 console.error(`Error al subir seguro a Supabase:`, result.error);
                 uploadErrors.push({ type: 'seguro', error: result.error });
               } else if (result.publicUrl) {
-                console.log(`Seguro subido exitosamente: ${result.publicUrl}`);
                 documentos.docSeguro = result.publicUrl;
               }
               return result;
@@ -110,7 +101,6 @@ const crearSolicitud = async (req, res) => {
       
       if (req.files.factura && req.files.factura.length > 0) {
         const file = req.files.factura[0];
-        console.log(`Preparando subida de factura: ${file.originalname}, tamaño: ${file.size} bytes`);
         uploadPromises.push(
           uploadFile(file.buffer, file.originalname, file.mimetype, 'factura')
             .then(result => {
@@ -118,7 +108,6 @@ const crearSolicitud = async (req, res) => {
                 console.error(`Error al subir factura a Supabase:`, result.error);
                 uploadErrors.push({ type: 'factura', error: result.error });
               } else if (result.publicUrl) {
-                console.log(`Factura subida exitosamente: ${result.publicUrl}`);
                 documentos.docFacturaVehiculo = result.publicUrl;
               }
               return result;
@@ -127,9 +116,7 @@ const crearSolicitud = async (req, res) => {
       }
       
       // Esperar a que todas las subidas terminen
-      console.log(`Esperando a que finalicen todas las subidas...`);
       await Promise.all(uploadPromises);
-      console.log(`Todas las subidas finalizadas, documentos:`, documentos);
       
       // Verificar si hubo errores en las subidas
       if (uploadErrors.length > 0) {
@@ -272,76 +259,63 @@ const crearSolicitud = async (req, res) => {
       ano: anioVehiculo
     };
 
-    // Llamar al servicio para crear la solicitud
+    // Crear la solicitud con todos los datos
+    const solicitudCreada = await solicitudService.crearSolicitud(
+      datosVehiculo,
+      persona,
+      datosSeguro,
+      documentos
+    );
+    
+    // Construir la respuesta
+    const respuesta = {
+      idSolicitud: solicitudCreada.idsolicitud,
+      numeroSolicitud: solicitudCreada.numerosolicitud,
+      fechaRegistro: solicitudCreada.fecharegistro
+    };
+    
+    res.status(201).json({
+      success: true,
+      message: 'Solicitud creada exitosamente',
+      data: respuesta
+    });
+    
+    // Forzar actualización de estadísticas en segundo plano sin afectar la respuesta
     try {
-      const solicitudCreada = await solicitudService.crearSolicitud(
-        datosVehiculo,
-        persona,
-        datosSeguro,
-        documentos
-      );
-
-      // Transformar la respuesta al formato deseado
-      // Normalizar nombres de propiedades a minúsculas
-      const respuesta = {};
+      // Obtener ID del ciudadano para actualizar sus estadísticas personales
+      let idCiudadano = null;
       
-      // Convertir todas las claves a minúsculas para tener un formato estándar
-      if (solicitudCreada) {
-        Object.keys(solicitudCreada).forEach(key => {
-          const keyLower = key.toLowerCase();
-          respuesta[keyLower] = solicitudCreada[key];
-        });
+      // Intentar obtener el ID de varias fuentes posibles
+      if (persona && persona.idPersona) {
+        idCiudadano = persona.idPersona;
+      } else if (solicitudCreada && solicitudCreada.idpersona) {
+        idCiudadano = solicitudCreada.idpersona;
+      } else if (req.body && req.body.persona && req.body.persona.idPersona) {
+        idCiudadano = req.body.persona.idPersona;
       }
       
-      if (solicitudCreada?.enCola) {
-        respuesta.encola = true;
+      if (idCiudadano) {
+        statisticsService.getCiudadanoStatistics(idCiudadano, true)
+          .catch(error => console.error('Error al actualizar estadísticas de ciudadano:', error));
       }
       
-      // Intentar enviar notificación por correo (sin bloquear ni afectar el flujo principal)
-      if (req.user && req.user.idUsuario && solicitudCreada && solicitudCreada.idSolicitud) {
-        // Hacemos esto en segundo plano sin await
-        emailHelper.notificarCreacionSolicitud(solicitudCreada, req.user.idUsuario)
-          .catch(error => console.error('Error al notificar creación por correo:', error));
-      }
-      
-      // Notificar al empleado asignado automáticamente (sin bloquear ni afectar el flujo principal)
-      if (solicitudCreada && solicitudCreada.empleado && solicitudCreada.empleado.idPersona) {
-        try {
-          // Obtener el ID de usuario del empleado a partir de su ID de persona
-          const idEmpleado = solicitudCreada.empleado.idPersona;
-          const idUsuarioEmpleado = await emailHelper.obtenerIdUsuarioDePersona(idEmpleado);
-          
-          if (idUsuarioEmpleado) {
-            // Enviar notificación al empleado en segundo plano sin await
-            emailHelper.notificarAsignacionSolicitud(solicitudCreada, idUsuarioEmpleado)
-              .catch(error => console.error('Error al notificar asignación al empleado por correo:', error));
-          } else {
-            console.log(`No se pudo enviar notificación: empleado ${idEmpleado} sin usuario asociado`);
-          }
-        } catch (error) {
-          console.error('Error al notificar asignación automática por correo:', error);
-        }
-      }
-      
-      res.status(201).json({
-        success: true,
-        message: 'Solicitud creada exitosamente',
-        data: respuesta
-      });
+      // Actualizar estadísticas globales del sistema
+      statisticsService.getSystemStatistics({}, true)
+        .catch(error => console.error('Error al actualizar estadísticas del sistema:', error));
     } catch (error) {
-      // Manejar específicamente el error de límite de vehículos
-      if (error.message && error.message.includes('El ciudadano ya tiene') && error.message.includes('vehículos registrados')) {
-        return res.status(400).json({
-          success: false,
-          error: 'Límite de vehículos alcanzado',
-          message: error.message
-        });
-      }
-      
-      // Para otros errores, pasar al manejador de errores general
-      throw error;
+      console.error('Error en actualización de estadísticas post-creación:', error);
+      // Continuar normalmente - la actualización de estadísticas no debe interrumpir el flujo
     }
   } catch (error) {
+    // Manejar específicamente el error de límite de vehículos
+    if (error.message && error.message.includes('límite de vehículos')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Límite de vehículos excedido',
+        message: error.message
+      });
+    }
+    
     handleError(res, error, 'Error al crear solicitud');
   }
 };
@@ -365,15 +339,12 @@ const obtenerSolicitudesCiudadano = async (req, res) => {
       });
     }
     
-    console.log(`Obteniendo solicitudes para el usuario ID: ${idUsuario}${estado ? `, filtradas por estado: ${estado}` : ''}${idSolicitud ? `, filtradas por ID: ${idSolicitud}` : ''}`);
-    
     // Obtener ID de la persona asociada al usuario
     let idPersona = req.user.idPersona;
     
     // Si no tenemos idPersona directamente, intentar obtenerlo
     if (!idPersona && req.user.datosPersonales?.idPersona) {
       idPersona = req.user.datosPersonales.idPersona;
-      console.log(`Usando ID de persona desde datosPersonales: ${idPersona}`);
     }
     
     // Si todavía no tenemos idPersona, buscarlo usando el servicio de personas
@@ -383,9 +354,7 @@ const obtenerSolicitudesCiudadano = async (req, res) => {
         
         if (personaAsociada) {
           idPersona = personaAsociada.idpersona;
-          console.log(`Encontrada persona ID ${idPersona} asociada al usuario ID ${idUsuario}`);
         } else {
-          console.log(`No se encontró ninguna persona asociada al usuario ID ${idUsuario}`);
           
           return res.status(404).json({
             success: false,
@@ -445,8 +414,6 @@ const obtenerSolicitudesCiudadano = async (req, res) => {
     
     // Si no hay idSolicitud, obtener todas las solicitudes del ciudadano (con filtro de estado si existe)
     const solicitudes = await solicitudService.obtenerSolicitudesPorCiudadano(idPersona, idUsuario, estado);
-    
-    console.log(`Se encontraron ${solicitudes.length} solicitudes para la persona ID ${idPersona} (Usuario ID ${idUsuario})`);
     
     res.status(200).json({
       success: true,

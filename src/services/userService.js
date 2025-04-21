@@ -178,7 +178,7 @@ const authenticateUser = async (email, password) => {
       exactMatch: true 
     });
     
-    if (!user || user.estado !== 'activo') {
+    if (!user || user.estado === 'deshabilitado') {
       return null;
     }
     
