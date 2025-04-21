@@ -6567,3 +6567,70 @@ paths:
                     example: 'Se requiere rol de empleado o administrador'
         '500':
           $ref: '#/components/schemas/Error'
+
+  /contact:
+    post:
+      tags:
+        - Contacto
+      summary: Envía un mensaje desde el formulario de contacto
+      description: Permite a los usuarios enviar mensajes al equipo de soporte desde el formulario de contacto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - nombre
+                - correo
+                - mensaje
+              properties:
+                nombre:
+                  type: string
+                  description: Nombre de la persona que contacta
+                  example: "Juan Pérez"
+                correo:
+                  type: string
+                  format: email
+                  description: Correo electrónico de la persona
+                  example: "juanperez@ejemplo.com"
+                asunto:
+                  type: string
+                  description: Asunto del mensaje
+                  example: "Consulta sobre el registro de mi motocicleta"
+                mensaje:
+                  type: string
+                  description: Contenido del mensaje
+                  example: "Tengo una duda sobre cómo completar el formulario de registro de mi motocicleta nueva. ¿Podrían ayudarme?"
+      responses:
+        '200':
+          description: Mensaje enviado correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Mensaje enviado correctamente"
+        '400':
+          description: Datos inválidos en la solicitud
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "Datos incompletos"
+                  message:
+                    type: string
+                    example: "Por favor complete todos los campos requeridos"
+        '500':
+          $ref: '#/components/schemas/Error'

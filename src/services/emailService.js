@@ -576,10 +576,221 @@ const notificarSolicitudProcesada = async (solicitud, emailDestinatario) => {
   });
 };
 
+// Envía un correo electrónico desde el formulario de contacto
+
+const enviarCorreoContacto = async (datos) => {
+  try {
+    if (!datos.nombre || !datos.correo || !datos.mensaje) {
+      return { success: false, error: 'Faltan datos obligatorios para el correo de contacto' };
+    }
+
+    const destinatario = 'servicio.mototrack@gmail.com';
+    const asunto = datos.asunto || 'Nuevo mensaje de contacto desde MotoTrack';
+    const plantilla = generarPlantillaContacto(datos);
+
+    return await enviarCorreo({
+      to: destinatario,
+      subject: asunto,
+      html: plantilla
+    });
+  } catch (error) {
+    console.error('Error al enviar correo de contacto:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Genera una plantilla HTML para emails de contacto
+
+const generarPlantillaContacto = (datos) => {
+  // Paleta de colores (misma que en generarPlantilla)
+  const colores = {
+    brand: '#5046e5',
+    accent: '#06b6d4',
+    dark: '#1e293b',
+    medium: '#64748b',
+    light: '#e2e8f0',
+    white: '#ffffff',
+  };
+
+  const asunto = datos.asunto || 'Mensaje de contacto';
+  
+  // Sanitizar mensaje (convertir saltos de línea a <br>)
+  const mensajeHTML = datos.mensaje
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+    .replace(/\n/g, '<br>');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Nuevo mensaje de contacto</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        
+        * {
+          box-sizing: border-box;
+          margin: 0;
+          padding: 0;
+        }
+        
+        body {
+          font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+          background-color: #f1f5f9;
+          margin: 0;
+          padding: 0;
+          color: ${colores.dark};
+          line-height: 1.6;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+        
+        .container {
+          max-width: 620px;
+          margin: 40px auto;
+          background-color: ${colores.white};
+          border-radius: 16px;
+          overflow: hidden;
+          box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+        }
+        
+        .header {
+          background: linear-gradient(135deg, ${colores.brand}, ${colores.accent});
+          padding: 38px 20px;
+          text-align: center;
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .logo {
+          position: relative;
+          color: white;
+          font-size: 34px;
+          font-weight: 800;
+          letter-spacing: -0.5px;
+          margin-bottom: 4px;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-title {
+          position: relative;
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 18px;
+          font-weight: 500;
+        }
+        
+        .content {
+          padding: 40px 30px;
+        }
+        
+        .greeting {
+          font-size: 22px;
+          font-weight: 700;
+          color: ${colores.dark};
+          margin-bottom: 20px;
+        }
+        
+        .message {
+          font-size: 16px;
+          line-height: 1.7;
+          color: ${colores.medium};
+          margin-bottom: 24px;
+        }
+        
+        .contact-details {
+          background-color: #f8fafc;
+          border-radius: 12px;
+          padding: 20px;
+          margin-bottom: 30px;
+          border: 1px solid ${colores.light};
+        }
+        
+        .details-row {
+          display: flex;
+          margin-bottom: 10px;
+        }
+        
+        .details-label {
+          flex: 0 0 80px;
+          font-weight: 600;
+          color: ${colores.dark};
+        }
+        
+        .details-value {
+          flex: 1;
+          color: ${colores.medium};
+        }
+        
+        .message-content {
+          background-color: #f8fafc;
+          border-radius: 12px;
+          padding: 20px;
+          margin-bottom: 30px;
+          border: 1px solid ${colores.light};
+        }
+        
+        .footer {
+          background-color: #f8fafc;
+          padding: 30px;
+          text-align: center;
+          color: ${colores.medium};
+          font-size: 14px;
+          border-top: 1px solid ${colores.light};
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="logo">MotoTrack</div>
+          <div class="header-title">Formulario de Contacto</div>
+        </div>
+        
+        <div class="content">
+          <div class="greeting">Nuevo mensaje de contacto</div>
+          
+          <p class="message">Se ha recibido un nuevo mensaje a través del formulario de contacto en el sitio web de MotoTrack.</p>
+          
+          <div class="contact-details">
+            <div class="details-row">
+              <div class="details-label">Nombre:&nbsp;</div>
+              <div class="details-value">${datos.nombre}</div>
+            </div>
+            <div class="details-row">
+              <div class="details-label">Correo:&nbsp;</div>
+              <div class="details-value">${datos.correo}</div>
+            </div>
+            <div class="details-row">
+              <div class="details-label">Asunto:&nbsp;</div>
+              <div class="details-value">${asunto}</div>
+            </div>
+          </div>
+          
+          <p class="message">Mensaje:&nbsp;</p>
+          <div class="message-content">
+            ${mensajeHTML}
+          </div>
+        </div>
+        
+        <div class="footer">
+          <p>© ${new Date().getFullYear()} MotoTrack - Sistema de Registro y Control de Motocicletas</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 module.exports = {
   enviarCorreo,
   generarPlantilla,
   notificarNuevaSolicitud,
   notificarAsignacionSolicitud,
-  notificarSolicitudProcesada
+  notificarSolicitudProcesada,
+  enviarCorreoContacto
 }; 
