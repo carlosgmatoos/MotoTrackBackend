@@ -818,8 +818,10 @@ const obtenerSolicitudPorId = async (idSolicitud) => {
  * Obtener las solicitudes asignadas a un empleado
  */
 const obtenerSolicitudesPorEmpleado = async (idEmpleado) => {
+  const client = await pool.connect();
+  
   try {
-    const result = await pool.query(
+    const result = await client.query(
       `SELECT s.*, 
         v.chasis, v.tipoUso, v.idTipoVehiculo, v.año, v.color, v.cilindraje,
         m.idModelo, m.nombre as modeloNombre,
@@ -949,14 +951,17 @@ const obtenerSolicitudesPorEmpleado = async (idEmpleado) => {
     
     return solicitudes;
   } catch (error) {
-    throw error;
+    console.error('Error al obtener solicitudes del empleado:', error);
+    throw new Error('Error al obtener solicitudes del empleado');
+  } finally {
+    client.release();
   }
 };
 
 /**
  * Obtener todas las solicitudes (para administradores)
  */
-const obtenerTodasSolicitudes = async (filtros = {}, paginacion = { page: 1, limit: 10 }) => {
+const obtenerTodasSolicitudes = async (filtros = {}) => {
   const client = await pool.connect();
   
   try {
@@ -1144,12 +1149,12 @@ const obtenerTodasSolicitudes = async (filtros = {}, paginacion = { page: 1, lim
     
     return {
       success: true,
-      totalItems: total,
+      count: total,
       data: solicitudes
     };
   } catch (error) {
     console.error('Error al obtener todas las solicitudes:', error);
-    throw error;
+    throw new Error('Error al obtener todas las solicitudes');
   } finally {
     client.release();
   }
@@ -1452,7 +1457,7 @@ const generarMatricula = async () => {
 /**
  * Obtener las solicitudes asignadas a un empleado con filtros
  */
-const obtenerSolicitudesPorEmpleadoFiltradas = async (filtros, paginacion = { page: 1, limit: 10 }) => {
+const obtenerSolicitudesPorEmpleadoFiltradas = async (filtros) => {
   const client = await pool.connect();
   
   try {
@@ -1501,16 +1506,10 @@ const obtenerSolicitudesPorEmpleadoFiltradas = async (filtros, paginacion = { pa
     if (total === 0) {
       return {
         success: true,
-        totalItems: 0,
-        totalPages: 0,
-        currentPage: paginacion.page,
+        count: 0,
         data: []
       };
     }
-    
-    // Calcular offset y total de páginas
-    const offset = (paginacion.page - 1) * paginacion.limit;
-    const totalPages = Math.ceil(total / paginacion.limit);
     
     const query = `
       SELECT s.*, 
@@ -1548,10 +1547,7 @@ const obtenerSolicitudesPorEmpleadoFiltradas = async (filtros, paginacion = { pa
       ORDER BY 
         CASE WHEN s.estadoDecision = 'Pendiente' THEN 0 ELSE 1 END,
         s.fechaRegistro ASC
-      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `;
-    
-    queryParams.push(paginacion.limit, offset);
     
     const result = await client.query(query, queryParams);
     
@@ -1639,20 +1635,19 @@ const obtenerSolicitudesPorEmpleadoFiltradas = async (filtros, paginacion = { pa
           numeroPoliza: solicitud.seguronumeropoliza,
           estado: solicitud.seguroestado
         };
-    }
-    
-    return respuesta;
+      }
+      
+      return respuesta;
     });
     
     return {
       success: true,
-      totalItems: total,
-      totalPages: totalPages,
-      currentPage: paginacion.page,
+      count: total,
       data: solicitudes
     };
   } catch (error) {
-    throw error;
+    console.error('Error al obtener solicitudes del empleado:', error);
+    throw new Error('Error al obtener solicitudes del empleado');
   } finally {
     client.release();
   }

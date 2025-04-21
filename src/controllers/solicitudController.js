@@ -506,7 +506,7 @@ const obtenerSolicitudesEmpleado = async (req, res) => {
     }
     
     // Extraer filtros desde los query params
-    const { marca, modelo, estado, fechaDesde, fechaHasta, idSolicitud, page = 1, limit = 10 } = req.query;
+    const { marca, modelo, estado, fechaDesde, fechaHasta, idSolicitud } = req.query;
     
     if (!idEmpleado) {
       return res.status(400).json({
@@ -534,9 +534,6 @@ const obtenerSolicitudesEmpleado = async (req, res) => {
       if (solicitud && solicitud.empleado && solicitud.empleado.idPersona === idEmpleado) {
         return res.status(200).json({
           success: true,
-          totalItems: 1,
-          totalPages: 1,
-          currentPage: 1,
           data: [solicitud] // Devolver como array para mantener consistencia con la API
         });
       } else {
@@ -559,13 +556,7 @@ const obtenerSolicitudesEmpleado = async (req, res) => {
     if (fechaDesde) filtros.fechaDesde = fechaDesde;
     if (fechaHasta) filtros.fechaHasta = fechaHasta;
     
-    // Paginación
-    const paginacion = {
-      page: parseInt(page, 10),
-      limit: parseInt(limit, 10)
-    };
-    
-    const result = await solicitudService.obtenerSolicitudesPorEmpleadoFiltradas(filtros, paginacion);
+    const result = await solicitudService.obtenerSolicitudesPorEmpleadoFiltradas(filtros);
     
     res.status(200).json(result);
   } catch (error) {
@@ -744,7 +735,7 @@ const obtenerTodasSolicitudes = async (req, res) => {
       if (solicitud) {
         return res.status(200).json({
           success: true,
-          totalItems: 1,
+          count: 1,
           data: [solicitud] // Devolver como array para mantener consistencia con la API
         });
       } else {
@@ -767,7 +758,7 @@ const obtenerTodasSolicitudes = async (req, res) => {
     if (fechaDesde) filtros.fechaDesde = new Date(fechaDesde);
     if (fechaHasta) filtros.fechaHasta = new Date(fechaHasta);
     
-    // Pasar isAdmin=true para mostrar todas las solicitudes
+    // Obtener todas las solicitudes sin paginación
     const result = await solicitudService.obtenerTodasSolicitudes(filtros);
     
     res.status(200).json(result);
