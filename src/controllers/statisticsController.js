@@ -17,7 +17,8 @@ const getSystemDashboard = async (req, res) => {
       idMarca: req.query.idMarca ? parseInt(req.query.idMarca) : null,
       idTipoVehiculo: req.query.idTipoVehiculo ? parseInt(req.query.idTipoVehiculo) : null,
       periodo: req.query.periodo || 'mes', // valores posibles: semana, mes, trimestre, año
-      vista: req.query.vista || 'completo'  // valores posibles: completo, matriculas, solicitudes, empleados, distribucion, tendencias
+      vista: req.query.vista || 'completo',  // valores posibles: completo, matriculas, solicitudes, empleados, distribucion, tendencias
+      año: req.query.año || new Date().getFullYear() // Asegurar que siempre haya un año disponible
     };
     
     const statistics = await statisticsService.getSystemStatistics(filtros);
@@ -84,6 +85,11 @@ const getCiudadanoDashboard = async (req, res) => {
  */
 const getEmpleadoDashboard = async (req, res) => {
   try {
+    // Añadir cabeceras para evitar caché en el navegador
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     // Obtener ID de la persona del empleado autenticado
     let idEmpleado = req.user.idPersona;
     
@@ -125,6 +131,7 @@ const getEmpleadoDashboard = async (req, res) => {
       idMarca: req.query.idMarca ? parseInt(req.query.idMarca) : null,
       idTipoVehiculo: req.query.idTipoVehiculo ? parseInt(req.query.idTipoVehiculo) : null,
       periodo: req.query.periodo || 'mes', // valores posibles: semana, mes, trimestre, año
+      año: req.query.año || new Date().getFullYear() // Asegurar que siempre haya un año disponible
     };
     
     const statistics = await statisticsService.getEmpleadoStatistics(idEmpleado, filtros);

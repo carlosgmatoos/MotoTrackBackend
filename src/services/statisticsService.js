@@ -686,18 +686,27 @@ const getEmpleadoStatistics = async (idEmpleado, filtros = {}) => {
             SELECT 
               fecha::date as periodo,
               COUNT(s.idSolicitud) as total,
+              COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Pendiente') as pendientes,
               COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Aprobada') as aprobadas,
               COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Rechazada') as rechazadas
             FROM fechas f
             LEFT JOIN Solicitud s ON 
               DATE(s.fechaProcesada) = f.fecha AND
-              s.idEmpleado = $1 AND
-              s.fechaProcesada IS NOT NULL AND
-              s.fechaProcesada <= ${fechaLimite}
+              s.idEmpleado = $1
               ${condicionesVehiculos.length > 0 ? 'AND ' + condicionesVehiculos.map(c => c.replace(/^\w+/, 's.$&')).join(' AND ') : ''}
               ${condicionesSolicitudes.length > 0 ? 'AND ' + condicionesSolicitudes.map(c => c.replace(/^\w+/, 's.$&')).join(' AND ') : ''}
             GROUP BY periodo
             ORDER BY periodo
+          ),
+          hoy_stats AS (
+            SELECT
+              COUNT(*) as total,
+              COUNT(*) FILTER (WHERE estadoDecision = 'Pendiente') as pendientes,
+              COUNT(*) FILTER (WHERE estadoDecision = 'Aprobada') as aprobadas,
+              COUNT(*) FILTER (WHERE estadoDecision = 'Rechazada') as rechazadas
+            FROM Solicitud
+            WHERE idEmpleado = $1
+              AND DATE(fechaProcesada) = CURRENT_DATE
           )
           SELECT 
             CASE 
@@ -709,9 +718,22 @@ const getEmpleadoStatistics = async (idEmpleado, filtros = {}) => {
               WHEN to_char(periodo, 'D')::int = 6 THEN 'Vie'
               WHEN to_char(periodo, 'D')::int = 7 THEN 'Sáb'
             END as periodo,
-            total,
-            aprobadas,
-            rechazadas
+            CASE 
+              WHEN periodo = CURRENT_DATE THEN (SELECT total FROM hoy_stats)
+              ELSE total
+            END as total,
+            CASE 
+              WHEN periodo = CURRENT_DATE THEN (SELECT pendientes FROM hoy_stats)
+              ELSE pendientes
+            END as pendientes,
+            CASE 
+              WHEN periodo = CURRENT_DATE THEN (SELECT aprobadas FROM hoy_stats)
+              ELSE aprobadas
+            END as aprobadas,
+            CASE 
+              WHEN periodo = CURRENT_DATE THEN (SELECT rechazadas FROM hoy_stats)
+              ELSE rechazadas
+            END as rechazadas
           FROM stats
         `;
         periodoQuery = serieFechasSQL;
@@ -728,6 +750,7 @@ const getEmpleadoStatistics = async (idEmpleado, filtros = {}) => {
             SELECT 
               s.num_semana,
               COUNT(sol.idSolicitud) as total,
+              COUNT(sol.idSolicitud) FILTER (WHERE sol.estadoDecision = 'Pendiente') as pendientes,
               COUNT(sol.idSolicitud) FILTER (WHERE sol.estadoDecision = 'Aprobada') as aprobadas,
               COUNT(sol.idSolicitud) FILTER (WHERE sol.estadoDecision = 'Rechazada') as rechazadas
             FROM semanas s
@@ -735,19 +758,46 @@ const getEmpleadoStatistics = async (idEmpleado, filtros = {}) => {
               EXTRACT(WEEK FROM sol.fechaProcesada) - EXTRACT(WEEK FROM date_trunc('month', sol.fechaProcesada)) = s.num_semana AND
               EXTRACT(MONTH FROM sol.fechaProcesada) = EXTRACT(MONTH FROM CURRENT_DATE) AND
               EXTRACT(YEAR FROM sol.fechaProcesada) = ${yearFilter} AND
-              sol.idEmpleado = $1 AND
-              sol.fechaProcesada IS NOT NULL AND
-              sol.fechaProcesada <= ${fechaLimite}
+              sol.idEmpleado = $1
               ${condicionesVehiculos.length > 0 ? 'AND ' + condicionesVehiculos.map(c => c.replace(/^\w+/, 'sol.$&')).join(' AND ') : ''}
               ${condicionesSolicitudes.length > 0 ? 'AND ' + condicionesSolicitudes.map(c => c.replace(/^\w+/, 'sol.$&')).join(' AND ') : ''}
             GROUP BY s.num_semana
             ORDER BY s.num_semana
+          ),
+          semana_actual_stats AS (
+            SELECT
+              COUNT(*) as total,
+              COUNT(*) FILTER (WHERE estadoDecision = 'Pendiente') as pendientes,
+              COUNT(*) FILTER (WHERE estadoDecision = 'Aprobada') as aprobadas,
+              COUNT(*) FILTER (WHERE estadoDecision = 'Rechazada') as rechazadas
+            FROM Solicitud
+            WHERE idEmpleado = $1
+              AND EXTRACT(WEEK FROM fechaProcesada) - EXTRACT(WEEK FROM date_trunc('month', fechaProcesada)) = EXTRACT(WEEK FROM CURRENT_DATE) - EXTRACT(WEEK FROM date_trunc('month', CURRENT_DATE))
+              AND EXTRACT(MONTH FROM fechaProcesada) = EXTRACT(MONTH FROM CURRENT_DATE)
+              AND EXTRACT(YEAR FROM fechaProcesada) = ${yearFilter}
           )
           SELECT 
             'Semana ' || (num_semana + 1) as periodo,
-            total,
-            aprobadas,
-            rechazadas
+            CASE 
+              WHEN num_semana = EXTRACT(WEEK FROM CURRENT_DATE) - EXTRACT(WEEK FROM date_trunc('month', CURRENT_DATE))
+              THEN (SELECT total FROM semana_actual_stats)
+              ELSE total
+            END as total,
+            CASE 
+              WHEN num_semana = EXTRACT(WEEK FROM CURRENT_DATE) - EXTRACT(WEEK FROM date_trunc('month', CURRENT_DATE))
+              THEN (SELECT pendientes FROM semana_actual_stats)
+              ELSE pendientes
+            END as pendientes,
+            CASE 
+              WHEN num_semana = EXTRACT(WEEK FROM CURRENT_DATE) - EXTRACT(WEEK FROM date_trunc('month', CURRENT_DATE))
+              THEN (SELECT aprobadas FROM semana_actual_stats)
+              ELSE aprobadas
+            END as aprobadas,
+            CASE 
+              WHEN num_semana = EXTRACT(WEEK FROM CURRENT_DATE) - EXTRACT(WEEK FROM date_trunc('month', CURRENT_DATE))
+              THEN (SELECT rechazadas FROM semana_actual_stats)
+              ELSE rechazadas
+            END as rechazadas
           FROM stats
         `;
         periodoQuery = serieFechasSQL;
@@ -765,29 +815,59 @@ const getEmpleadoStatistics = async (idEmpleado, filtros = {}) => {
             SELECT 
               m.num_mes,
               COUNT(s.idSolicitud) as total,
+              COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Pendiente') as pendientes,
               COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Aprobada') as aprobadas,
               COUNT(s.idSolicitud) FILTER (WHERE s.estadoDecision = 'Rechazada') as rechazadas
             FROM meses m
             LEFT JOIN Solicitud s ON 
               EXTRACT(MONTH FROM s.fechaProcesada) = m.num_mes AND
               EXTRACT(YEAR FROM s.fechaProcesada) = ${yearFilter} AND
-              s.idEmpleado = $1 AND
-              s.fechaProcesada <= ${fechaLimite} AND
-              s.fechaProcesada IS NOT NULL
+              s.idEmpleado = $1
               ${condicionesVehiculos.length > 0 ? 'AND ' + condicionesVehiculos.map(c => c.replace(/^\w+/, 's.$&')).join(' AND ') : ''}
               ${condicionesSolicitudes.length > 0 ? 'AND ' + condicionesSolicitudes.map(c => c.replace(/^\w+/, 's.$&')).join(' AND ') : ''}
             GROUP BY m.num_mes
             ORDER BY m.num_mes
+          ),
+          mes_actual_stats AS (
+            SELECT
+              COUNT(*) as total,
+              COUNT(*) FILTER (WHERE estadoDecision = 'Pendiente') as pendientes,
+              COUNT(*) FILTER (WHERE estadoDecision = 'Aprobada') as aprobadas,
+              COUNT(*) FILTER (WHERE estadoDecision = 'Rechazada') as rechazadas
+            FROM Solicitud
+            WHERE idEmpleado = $1
+              AND EXTRACT(MONTH FROM fechaProcesada) = EXTRACT(MONTH FROM CURRENT_DATE)
+              AND EXTRACT(YEAR FROM fechaProcesada) = ${yearFilter}
+              ${condicionesVehiculos.length > 0 ? 'AND ' + condicionesVehiculos.join(' AND ') : ''}
+              ${condicionesSolicitudes.length > 0 ? 'AND ' + condicionesSolicitudes.join(' AND ') : ''}
           )
           SELECT 
             to_char(make_date(${yearFilter}, num_mes, 1), 'Mon') as periodo,
-            total,
-            aprobadas,
-            rechazadas
+            CASE 
+              WHEN num_mes = EXTRACT(MONTH FROM CURRENT_DATE)::integer AND ${yearFilter} = EXTRACT(YEAR FROM CURRENT_DATE)::integer 
+              THEN (SELECT total FROM mes_actual_stats)
+              ELSE total
+            END as total,
+            CASE 
+              WHEN num_mes = EXTRACT(MONTH FROM CURRENT_DATE)::integer AND ${yearFilter} = EXTRACT(YEAR FROM CURRENT_DATE)::integer 
+              THEN (SELECT pendientes FROM mes_actual_stats)
+              ELSE pendientes
+            END as pendientes,
+            CASE 
+              WHEN num_mes = EXTRACT(MONTH FROM CURRENT_DATE)::integer AND ${yearFilter} = EXTRACT(YEAR FROM CURRENT_DATE)::integer 
+              THEN (SELECT aprobadas FROM mes_actual_stats)
+              ELSE aprobadas
+            END as aprobadas,
+            CASE 
+              WHEN num_mes = EXTRACT(MONTH FROM CURRENT_DATE)::integer AND ${yearFilter} = EXTRACT(YEAR FROM CURRENT_DATE)::integer 
+              THEN (SELECT rechazadas FROM mes_actual_stats)
+              ELSE rechazadas
+            END as rechazadas
           FROM stats
         `;
         periodoQuery = serieFechasSQL;
         periodoLabel = 'Mes';
+        break;
     }
 
     // Para estas consultas generadas solo necesitamos el idEmpleado como parámetro

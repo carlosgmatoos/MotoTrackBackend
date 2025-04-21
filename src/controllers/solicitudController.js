@@ -592,28 +592,20 @@ const procesarSolicitud = async (req, res) => {
     if (!estadoDecision || !['Aprobada', 'Rechazada'].includes(estadoDecision)) {
       return res.status(400).json({
         success: false,
-        error: 'Datos incompletos',
-        message: 'Debe proporcionar un estado de decisión válido (Aprobada o Rechazada)'
+        error: 'Datos inválidos',
+        message: 'La decisión debe ser "Aprobada" o "Rechazada"'
       });
     }
     
-    if (estadoDecision === 'Aprobada' && !notaRevision) {
+    if (estadoDecision === 'Rechazada' && !motivoRechazo) {
       return res.status(400).json({
         success: false,
         error: 'Datos incompletos',
-        message: 'Debe proporcionar una nota de revisión para aprobar la solicitud'
+        message: 'Debe proporcionar un motivo de rechazo'
       });
     }
     
-    if (estadoDecision === 'Rechazada' && (!motivoRechazo || !detalleRechazo)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Datos incompletos',
-        message: 'Debe proporcionar motivo y detalle de rechazo para rechazar la solicitud'
-      });
-    }
-    
-    // Obtener ID del empleado
+    // Obtener ID del empleado desde el token
     let idEmpleado = req.user.idPersona;
     
     // Si no tenemos idPersona directamente, intentar obtenerlo por otros medios
@@ -674,13 +666,33 @@ const procesarSolicitud = async (req, res) => {
     if (!solicitudActualizada) {
       return res.status(404).json({
         success: false,
-        error: 'Error al procesar la solicitud',
-        message: `No se pudo procesar la solicitud. Verifique que la solicitud existe, está pendiente y está asignada a usted o es administrador.`
+        error: 'Solicitud no encontrada',
+        message: `No se pudo procesar la solicitud con ID ${idSolicitud}`
       });
     }
     
-    // Intentar enviar notificación por correo (sin bloquear ni afectar el flujo principal)
-    if (idPersonaCiudadano) {
+    // Forzar actualización de estadísticas en segundo plano
+    try {
+      // Actualizar estadísticas del empleado que procesó la solicitud
+      statisticsService.getEmpleadoStatistics(idEmpleado, {})
+        .catch(error => console.error('Error al actualizar estadísticas del empleado:', error));
+      
+      // Si tenemos el ID del ciudadano, actualizar sus estadísticas personales
+      if (idPersonaCiudadano) {
+        statisticsService.getCiudadanoStatistics(idPersonaCiudadano)
+          .catch(error => console.error('Error al actualizar estadísticas del ciudadano:', error));
+      }
+      
+      // Actualizar estadísticas globales del sistema
+      statisticsService.getSystemStatistics({})
+        .catch(error => console.error('Error al actualizar estadísticas del sistema:', error));
+    } catch (error) {
+      console.error('Error en actualización de estadísticas post-procesamiento:', error);
+      // Continuar normalmente - la actualización de estadísticas no debe interrumpir el flujo
+    }
+    
+    // Intentar enviar notificación por correo (si existe función emailHelper)
+    if (typeof emailHelper !== 'undefined' && idPersonaCiudadano) {
       try {
         const idUsuarioCiudadano = await emailHelper.obtenerIdUsuarioDePersona(idPersonaCiudadano);
         if (idUsuarioCiudadano) {
@@ -695,11 +707,13 @@ const procesarSolicitud = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      message: `Solicitud ${estadoDecision.toLowerCase()} exitosamente`,
-      data: solicitudActualizada
+      data: solicitudActualizada,
+      message: estadoDecision === 'Aprobada' ? 
+        'Solicitud aprobada exitosamente' : 
+        'Solicitud rechazada exitosamente'
     });
   } catch (error) {
-    handleError(res, error, 'Error al procesar la solicitud');
+    handleError(res, error, 'Error al procesar solicitud');
   }
 };
 
