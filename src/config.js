@@ -20,5 +20,8 @@ module.exports = {
   GMAIL_REFRESH_TOKEN: process.env.GMAIL_REFRESH_TOKEN,
   
   // URL del frontend para los enlaces en los correos
-  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173'
+  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
+  
+  // CORS configuration
+  CORS_ORIGINS: process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:3000'
 };

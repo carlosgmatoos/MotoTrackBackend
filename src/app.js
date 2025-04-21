@@ -61,13 +61,7 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
 // CORS configuration
 const corsOptions = {
-  origin: [
-    'http://192.168.159.1:5173',
-    'http://192.168.184.1:5173',
-    'http://192.168.1.11:5173',
-    'http://localhost:5173',      // Si accedes desde localhost en el frontend
-    'http://localhost:3000'       // Para solicitudes locales
-  ],
+  origin: config.CORS_ORIGINS.split(','),
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
